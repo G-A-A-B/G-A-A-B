@@ -11,9 +11,12 @@ Rode com:  python -m cenarios.cenario_base
 
 from __future__ import annotations
 
-from estoque_atp import Canal, MotorATP
+from pathlib import Path
+
+from estoque_atp import Canal, MotorATP, exportar_xlsx
 
 LARGURA = 68
+ARQUIVO_XLSX = Path("saida") / "historico_movimentos.xlsx"
 
 
 def _linha_atp(motor: MotorATP) -> str:
@@ -49,20 +52,23 @@ def main() -> None:
 
     evento(motor, "T0  Estado inicial (nenhuma reserva)")
 
-    motor.reservar("Marketplace", 15)
+    motor.reservar("Marketplace", 15, "T1 Marketplace reserva 15")
     evento(motor, "T1  Marketplace reserva 15  (teto 20 → resta 5)")
 
-    motor.reservar("Site", 40)
+    motor.reservar("Site", 40, "T2 Site reserva 40")
     evento(motor, "T2  Site reserva 40  (proteção da Loja segue intocada)")
 
-    motor.efetivar("Marketplace", 15)
+    motor.efetivar("Marketplace", 15, "T3 Marketplace efetiva 15")
     evento(motor, "T3  Marketplace efetiva 15  (libera reserva + baixa físico)")
 
-    motor.reservar("Loja", 30)
+    motor.reservar("Loja", 30, "T4 Loja reserva 30")
     evento(motor, "T4  Loja reserva 30  (consome exatamente sua proteção)")
 
     print("Invariantes mantidas em todos os eventos: "
           "não-oversell ✓  proteção honrada ✓")
+
+    destino = exportar_xlsx(motor, ARQUIVO_XLSX)
+    print(f"\nHistórico de movimentos exportado para: {destino}")
 
 
 if __name__ == "__main__":

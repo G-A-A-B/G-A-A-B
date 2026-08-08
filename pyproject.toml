@@ -3,6 +3,7 @@ name = "estoque-atp"
 version = "0.1.0"
 description = "Simulador de ATP multicanal com Estoque de Proteção e Restrição"
 requires-python = ">=3.10"
+dependencies = ["openpyxl>=3.1"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

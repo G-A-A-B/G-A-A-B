@@ -42,23 +42,35 @@ O motor valida a cada operação:
 Se qualquer invariante for violada, o motor levanta `ViolacaoDeInvariante`
 (indica bug do modelo, não erro de uso).
 
+📖 **Documentação completa do conceito e suas variações:** [`docs/ATP.md`](docs/ATP.md).
+
 ## Estrutura
 
 ```
-estoque_atp/motor.py       Motor de ATP (Canal, MotorATP)
+estoque_atp/motor.py       Motor de ATP (Canal, MotorATP) + histórico de movimentos
+estoque_atp/planilha.py    Exportação do histórico para .xlsx
 cenarios/cenario_base.py   Teste de mesa executável (3 canais, passo a passo)
-tests/test_motor.py        Suíte de testes
+tests/                     Suíte de testes (motor + histórico/xlsx)
+docs/ATP.md                Documentação de referência do modelo
 ```
 
 ## Como rodar
 
 ```bash
-# Teste de mesa (imprime a tabela de ATP a cada evento)
+# Instalar dependências (openpyxl para o .xlsx)
+pip install -e .
+
+# Teste de mesa: imprime a tabela de ATP a cada evento
+# e exporta o histórico para saida/historico_movimentos.xlsx
 python -m cenarios.cenario_base
 
 # Suíte de testes
 pytest
 ```
+
+O `.xlsx` gerado tem duas abas: **Movimentos** (uma linha por evento — físico,
+disponível, reservas e ATP por canal, com o tipo de evento colorido) e
+**Configuração** (físico inicial e as políticas de cada canal).
 
 ## Exemplo de uso
 
@@ -78,6 +90,10 @@ motor.atp("Site")            # 70  (100 − 30 de proteção da Loja)
 motor.reservar("Site", 40)   # reserva 40 para o Site
 motor.efetivar("Site", 40)   # confirma venda: libera reserva e baixa físico
 motor.cancelar("Site", 10)   # (se ainda houvesse reserva) devolve ao disponível
+
+# Histórico de movimentos → .xlsx
+from estoque_atp import exportar_xlsx
+exportar_xlsx(motor, "saida/historico.xlsx")
 ```
 
 ## Decisões de modelagem já cravadas

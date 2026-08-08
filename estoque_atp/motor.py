@@ -30,6 +30,7 @@ subtraí-la de novo blindaria estoque em dobro.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 
 class ErroDeReserva(Exception):
@@ -64,6 +65,26 @@ class Canal:
 
 
 @dataclass
+class Movimento:
+    """Uma linha do histórico de movimentos do teste de mesa.
+
+    Captura o estado do estoque LOGO APÓS o evento: físico, disponível,
+    reservas por canal e ATP por canal.
+    """
+
+    seq: int
+    momento: datetime
+    evento: str          # INICIAL | RESERVA | EFETIVACAO | CANCELAMENTO
+    canal: str           # "-" no evento INICIAL
+    quantidade: int      # 0 no evento INICIAL
+    rotulo: str          # descrição livre (ex.: "T1 Marketplace reserva 15")
+    fisico: int
+    disponivel: int
+    reservas: dict[str, int]
+    atp: dict[str, int]
+
+
+@dataclass
 class MotorATP:
     """Motor de ATP para um SKU em um CD único.
 
@@ -81,6 +102,8 @@ class MotorATP:
         self.fisico = fisico
         self.canais = {c.nome: c for c in canais}
         self.reservas = {c.nome: 0 for c in canais}
+        self.historico: list[Movimento] = []
+        self._registrar("INICIAL", "-", 0, "Estado inicial")
 
     # ------------------------------------------------------------------ #
     # Consultas
@@ -126,7 +149,7 @@ class MotorATP:
     # ------------------------------------------------------------------ #
     # Operações
     # ------------------------------------------------------------------ #
-    def reservar(self, nome: str, quantidade: int) -> None:
+    def reservar(self, nome: str, quantidade: int, rotulo: str = "") -> None:
         """Reserva `quantidade` para o canal. Recusa se exceder o ATP."""
         self._exige_canal(nome)
         self._exige_positivo(quantidade)
@@ -137,8 +160,9 @@ class MotorATP:
             )
         self.reservas[nome] += quantidade
         self._checar_invariantes()
+        self._registrar("RESERVA", nome, quantidade, rotulo)
 
-    def efetivar(self, nome: str, quantidade: int) -> None:
+    def efetivar(self, nome: str, quantidade: int, rotulo: str = "") -> None:
         """Efetiva a venda: libera a reserva E baixa o físico na mesma operação.
 
         Modela a efetivação atômica (sem gap entre liberar reserva e baixar o
@@ -154,8 +178,9 @@ class MotorATP:
         self.reservas[nome] -= quantidade
         self.fisico -= quantidade
         self._checar_invariantes()
+        self._registrar("EFETIVACAO", nome, quantidade, rotulo)
 
-    def cancelar(self, nome: str, quantidade: int) -> None:
+    def cancelar(self, nome: str, quantidade: int, rotulo: str = "") -> None:
         """Cancela parte da reserva do canal (físico permanece inalterado)."""
         self._exige_canal(nome)
         self._exige_positivo(quantidade)
@@ -166,6 +191,7 @@ class MotorATP:
             )
         self.reservas[nome] -= quantidade
         self._checar_invariantes()
+        self._registrar("CANCELAMENTO", nome, quantidade, rotulo)
 
     # ------------------------------------------------------------------ #
     # Invariantes (garantias do modelo)
@@ -191,6 +217,25 @@ class MotorATP:
                 raise ViolacaoDeInvariante(
                     f"proteção violada em {nome}: alcançável {alcancavel} < alvo {alvo}"
                 )
+
+    # ------------------------------------------------------------------ #
+    # Histórico de movimentos
+    # ------------------------------------------------------------------ #
+    def _registrar(self, evento: str, canal: str, quantidade: int, rotulo: str) -> None:
+        self.historico.append(
+            Movimento(
+                seq=len(self.historico),
+                momento=datetime.now(),
+                evento=evento,
+                canal=canal,
+                quantidade=quantidade,
+                rotulo=rotulo,
+                fisico=self.fisico,
+                disponivel=self.disponivel,
+                reservas=dict(self.reservas),
+                atp=self.snapshot(),
+            )
+        )
 
     # ------------------------------------------------------------------ #
     # Helpers
