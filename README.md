@@ -155,8 +155,8 @@ foca na **diferenciação de demanda por canal**.
   demais** · com janela temporal (expira) · **residual** (ver §3).
 - **Restrição:** **instantânea** (limita reservas simultâneas) · acumulada por
   período (cota de vendas).
-- **Sobre-comprometimento** (Σ proteções > físico): rejeitar no cadastro ·
-  *fair-share* (rateio proporcional) · **saturar ATP em 0** (atual).
+- **Sobre-comprometimento** (Σ proteções > físico): **rejeitar na construção**
+  (atual — `ConfiguracaoInvalida`) · *fair-share* (rateio proporcional, roadmap).
 
 ---
 
@@ -239,16 +239,19 @@ consumido para ele.
 
 ```
 estoque_atp/
-  motor.py        Motor de ATP (Canal, MotorATP) + histórico de movimentos
-  planilha.py     Exportação do histórico para .xlsx (openpyxl)
+  motor.py           Motor de ATP (Canal, MotorATP) + histórico de movimentos
+  planilha.py        Exportação do histórico para .xlsx (openpyxl)
 cenarios/
-  cenario_base.py Teste de mesa executável (3 canais, passo a passo)
+  _apresentacao.py   Helpers de impressão da tabela de ATP e exportação
+  cenario_base.py    Teste de mesa base (3 canais, passo a passo)
+  variacoes.py       7 variações, cada uma isolando um comportamento do modelo
 tests/
-  test_motor.py     Fórmulas, ciclo de reserva e invariantes
-  test_historico.py Histórico em memória e exportação .xlsx
+  test_motor.py      Fórmulas, ciclo de reserva e invariantes
+  test_historico.py  Histórico em memória e exportação .xlsx
+  test_cenarios.py   Fumaça de todos os cenários
 docs/
-  ATP.md          Documentação de referência do modelo e variações
-pyproject.toml    Metadados e dependências (openpyxl)
+  ATP.md             Documentação de referência do modelo e variações
+pyproject.toml       Metadados e dependências (openpyxl)
 ```
 
 ---
@@ -270,13 +273,30 @@ pip install pytest
 ## 8. Como rodar
 
 ```bash
-# Teste de mesa: imprime a tabela de ATP a cada evento e
-# exporta o histórico para saida/historico_movimentos.xlsx
+# Cenário base: imprime a tabela de ATP a cada evento e
+# exporta o histórico para saida/cenario_base.xlsx
 python -m cenarios.cenario_base
+
+# Todas as variações (base + 7 cenários), cada uma exporta seu .xlsx em saida/
+python -m cenarios.variacoes
 
 # Suíte de testes
 pytest
 ```
+
+**Variações do teste de mesa** (`python -m cenarios.variacoes`), cada uma
+isolando um comportamento do modelo:
+
+| # | Cenário | O que demonstra |
+|---|---|---|
+| base | proteção + restrição | fluxo completo T0→T4 do exemplo da §11 |
+| 1 | **cancelamento** | cancelar devolve ao disponível sem mexer no físico; efetivar baixa o físico |
+| 2 | **disputa pela última unidade** | não-oversell: só um canal leva a última unidade; reserva excedente é recusada |
+| 3 | **por que proteger** | contraste com vs. sem proteção — sem ela o canal secundário rompe |
+| 4 | **proteção residual** | o residual evita bloquear estoque em dobro (Site vê 70, não 45) |
+| 5 | **restrição instantânea** | o teto reabre ao efetivar/cancelar |
+| 6 | **saturação no limite** | duas proteções somando exatamente o físico |
+| 7 | **config inválida** | proteções sobre-comprometidas são recusadas na construção |
 
 ---
 
@@ -393,7 +413,7 @@ Fontes usadas na fundamentação conceitual:
 **Próximos passos (cada um isolando uma variação):**
 
 - **Fair-share / prioridade** no rateio quando as proteções estão
-  sobre-comprometidas (hoje só satura o ATP em 0).
+  sobre-comprometidas (hoje são recusadas na construção com `ConfiguracaoInvalida`).
 - **Proteção com janela temporal** (expira e libera aos demais após um horário).
 - **Restrição acumulada por período** (cota de vendas) como política alternativa.
 - **ATP time-phased** com recebimentos futuros do CD.

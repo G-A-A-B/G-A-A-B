@@ -33,6 +33,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 
+class ConfiguracaoInvalida(Exception):
+    """Configuração de estoque/canais inconsistente (ex.: proteções que somam
+    mais que o físico — impossível honrar todas sem uma política de rateio)."""
+
+
 class ErroDeReserva(Exception):
     """Reserva recusada por exceder o ATP do canal."""
 
@@ -99,6 +104,12 @@ class MotorATP:
     def __init__(self, fisico: int, canais: list[Canal]) -> None:
         if fisico < 0:
             raise ValueError("estoque físico não pode ser negativo")
+        soma_protecoes = sum(c.protecao for c in canais)
+        if soma_protecoes > fisico:
+            raise ConfiguracaoInvalida(
+                f"proteções somam {soma_protecoes} > físico {fisico}: "
+                "impossível honrar todas (use rateio/fair-share para este caso)"
+            )
         self.fisico = fisico
         self.canais = {c.nome: c for c in canais}
         self.reservas = {c.nome: 0 for c in canais}

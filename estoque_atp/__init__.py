@@ -2,6 +2,7 @@
 
 from estoque_atp.motor import (
     Canal,
+    ConfiguracaoInvalida,
     ErroDeEfetivacao,
     ErroDeReserva,
     Movimento,
@@ -14,6 +15,7 @@ __all__ = [
     "Canal",
     "MotorATP",
     "Movimento",
+    "ConfiguracaoInvalida",
     "ErroDeReserva",
     "ErroDeEfetivacao",
     "ViolacaoDeInvariante",

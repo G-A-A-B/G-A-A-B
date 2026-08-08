@@ -6,6 +6,7 @@ import pytest
 
 from estoque_atp import (
     Canal,
+    ConfiguracaoInvalida,
     ErroDeEfetivacao,
     ErroDeReserva,
     MotorATP,
@@ -148,19 +149,44 @@ def test_disputa_pela_ultima_unidade_apenas_um_ganha():
 # --------------------------------------------------------------------------- #
 # Proteção sobre-comprometida (soma das proteções > físico)
 # --------------------------------------------------------------------------- #
-def test_protecao_sobrecomprometida_nao_gera_atp_negativo():
-    # Proteções somam 120 > físico 100. ATP deve saturar em 0, nunca negativo.
+def test_protecao_sobrecomprometida_e_recusada_na_construcao():
+    # Proteções somam 120 > físico 100: config impossível de honrar → recusada.
+    with pytest.raises(ConfiguracaoInvalida):
+        MotorATP(
+            fisico=100,
+            canais=[
+                Canal("A", protecao=60),
+                Canal("B", protecao=60),
+                Canal("C"),
+            ],
+        )
+
+
+def test_protecoes_somando_exatamente_o_fisico_sao_validas():
+    # Σ proteções == físico: no limite, ainda é honrável.
     m = MotorATP(
         fisico=100,
-        canais=[
-            Canal("A", protecao=60),
-            Canal("B", protecao=60),
-            Canal("C"),
-        ],
+        canais=[Canal("A", protecao=60), Canal("B", protecao=40)],
     )
-    assert m.atp("C") == 0                 # 100 − (60 + 60) saturado em 0
+    # Cada canal alcança exatamente sua proteção; nada sobra para invadir.
+    assert m.atp("A") == 60
+    assert m.atp("B") == 40
+    m.reservar("A", 60)
+    m.reservar("B", 40)
+    assert m.disponivel == 0
+
+
+def test_protecao_maior_que_fisico_apos_vendas_nao_gera_atp_negativo():
+    # Config válida (proteção 60 ≤ físico 100), mas vendas derrubam o físico
+    # abaixo da proteção. O ATP deve saturar em 0, nunca negativo.
+    m = MotorATP(fisico=100, canais=[Canal("A", protecao=60), Canal("B")])
+    m.reservar("B", 40)
+    m.efetivar("B", 40)          # físico cai para 60
+    m.reservar("A", 50)
+    m.efetivar("A", 50)          # físico cai para 10, abaixo da proteção 60
+    assert m.fisico == 10
+    assert m.atp("B") == 0       # nunca negativo
     assert m.atp("A") >= 0
-    assert m.atp("B") >= 0
 
 
 # --------------------------------------------------------------------------- #
