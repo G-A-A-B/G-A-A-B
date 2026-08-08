@@ -221,6 +221,22 @@ def test_protecao_sobrecomprometida_e_recusada_na_construcao():
         )
 
 
+def test_restricao_menor_que_protecao_no_mesmo_canal_e_recusada():
+    # Piso 30 com teto instantâneo 20: o canal nunca alcança a proteção.
+    with pytest.raises(ConfiguracaoInvalida):
+        MotorATP(fisico=100, canais=[Canal("A", protecao=30, restricao=20)])
+    # Idem para a cota acumulada.
+    with pytest.raises(ConfiguracaoInvalida):
+        MotorATP(fisico=100, canais=[Canal("A", protecao=30, restricao_acumulada=25)])
+
+
+def test_protecao_com_teto_maior_e_valida():
+    # Piso 20 com teto 50: piso garantido, teto como máximo. Config válida.
+    m = MotorATP(fisico=100, canais=[Canal("A", protecao=20, restricao=50), Canal("B")])
+    assert m.atp("A") == 50            # limitado pelo teto
+    assert m.atp("B") == 80            # 100 − 20 (piso da A)
+
+
 def test_protecoes_somando_exatamente_o_fisico_sao_validas():
     # Σ proteções == físico: no limite, ainda é honrável.
     m = MotorATP(

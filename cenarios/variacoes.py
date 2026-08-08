@@ -13,6 +13,10 @@ Cenários:
   7. config_invalida       — proteções sobre-comprometidas são recusadas
   8. fair_share            — sobre-comprometido rateado proporcionalmente
   9. restricao_acumulada   — cota de vendas no período (só reabre no reinício)
+ 10. piso_e_teto           — proteção (piso) e restrição (teto) no mesmo canal
+ 11. fair_share_tres       — fair-share entre três canais desiguais
+ 12. cota_liberada_cancel  — cancelamento devolve a cota acumulada do período
+ 13. dia_completo          — narrativa de um dia inteiro nos três canais
 """
 
 from __future__ import annotations
@@ -195,6 +199,95 @@ def cenario_restricao_acumulada() -> MotorATP:
     return motor
 
 
+def cenario_piso_e_teto() -> MotorATP:
+    """Um canal com proteção (piso garantido) E restrição instantânea (teto)."""
+    motor = MotorATP(
+        fisico=100,
+        canais=[Canal("Loja", protecao=20, restricao=50), Canal("Site")],
+    )
+    titulo("10) PISO + TETO — Loja com proteção 20 (piso) e restrição 50 (teto)")
+
+    evento(motor, "T0  Estado inicial  (Site vê 80: as 20 do piso da Loja ficam blindadas)")
+    motor.reservar("Loja", 50, "T1 Loja reserva 50")
+    evento(motor, "T1  Loja reserva 50  (bate o teto; ultrapassou o piso 20, que é soft)")
+    tentar_reservar(motor, "Loja", 1, "T2  Loja tenta reservar 1  (teto de 50 atingido)")
+
+    finalizar(motor, "cenario_piso_e_teto.xlsx")
+    return motor
+
+
+def cenario_fair_share_tres() -> MotorATP:
+    """Fair-share entre três canais desiguais (60/30/30 sobre físico 60)."""
+    motor = MotorATP(
+        fisico=60,
+        canais=[Canal("A", protecao=60), Canal("B", protecao=30), Canal("C", protecao=30)],
+        fair_share=True,
+    )
+    titulo("11) FAIR-SHARE (3 canais) — 60/30/30 sobre físico 60 → 30/15/15")
+
+    print(f"     proteções efetivas = {motor._protecoes_efetivas()}")
+    print("-" * 72)
+    evento(motor, "T0  Estado inicial  (cada canal recebe sua fatia proporcional)")
+    motor.reservar("A", 30, "T1 A reserva 30")
+    motor.reservar("B", 15, "T2 B reserva 15")
+    motor.reservar("C", 15, "T3 C reserva 15")
+    evento(motor, "T3  todos reservaram sua fatia  (disponível zera; nada em disputa)")
+
+    finalizar(motor, "cenario_fair_share_tres.xlsx")
+    return motor
+
+
+def cenario_cota_liberada_cancel() -> MotorATP:
+    """Cancelar devolve a cota acumulada do período (a reserva não virou venda)."""
+    motor = MotorATP(
+        fisico=100,
+        canais=[Canal("Marketplace", restricao_acumulada=20), Canal("Outro")],
+    )
+    titulo("12) COTA LIBERADA POR CANCELAMENTO — cota 20/período (Marketplace)")
+
+    evento(motor, "T0  Estado inicial  (cota do período = 20)")
+    motor.reservar("Marketplace", 20, "T1 Marketplace reserva 20")
+    evento(motor, "T1  Marketplace reserva 20  (cota cheia → ATP 0)")
+    motor.cancelar("Marketplace", 20, "T2 Marketplace cancela 20")
+    evento(motor, "T2  cancela 20  (nada foi vendido → cota REABRE para 20)")
+    motor.reservar("Marketplace", 12, "T3 Marketplace reserva 12")
+    motor.efetivar("Marketplace", 12, "T4 Marketplace efetiva 12")
+    evento(motor, "T4  vendeu 12 no período  (cota 20 − 12 = 8; essas não voltam)")
+
+    finalizar(motor, "cenario_cota_liberada_cancel.xlsx")
+    return motor
+
+
+def cenario_dia_completo() -> MotorATP:
+    """Narrativa de um dia inteiro: três canais, várias operações, vira o dia."""
+    motor = MotorATP(
+        fisico=100,
+        canais=[
+            Canal("Loja", protecao=30),
+            Canal("Site"),
+            Canal("Marketplace", restricao_acumulada=25),
+        ],
+    )
+    titulo("13) DIA COMPLETO — proteção (Loja) + cota de período (Marketplace)")
+
+    evento(motor, "Abertura  (Loja piso 30, Marketplace cota 25/dia)")
+    motor.reservar("Site", 40, "Manhã: Site reserva 40")
+    motor.reservar("Marketplace", 25, "Manhã: Marketplace reserva 25 (cota cheia)")
+    evento(motor, "Meio da manhã  (Site 40, Mkt 25; proteção da Loja intacta)")
+    motor.efetivar("Site", 40, "Tarde: Site efetiva 40")
+    motor.efetivar("Marketplace", 25, "Tarde: Marketplace efetiva 25")
+    evento(motor, "Tarde  (vendas confirmadas; Mkt esgotou a cota do dia)")
+    tentar_reservar(motor, "Marketplace", 1, "Fim de tarde: Marketplace tenta +1 (cota do dia esgotada)")
+    motor.reservar("Loja", 30, "Fim de tarde: Loja reserva sua proteção 30")
+    motor.efetivar("Loja", 30, "Fechamento: Loja efetiva 30")
+    evento(motor, "Fechamento  (físico 5; dia rendeu 95 vendas)")
+    motor.reiniciar_periodo("Vira o dia")
+    evento(motor, "Novo dia  (cota do Mkt reabre; ATP agora limitado pelo físico 5)")
+
+    finalizar(motor, "cenario_dia_completo.xlsx")
+    return motor
+
+
 def main() -> None:
     cenario_base()
     cenario_cancelamento()
@@ -206,6 +299,10 @@ def main() -> None:
     cenario_config_invalida()
     cenario_fair_share()
     cenario_restricao_acumulada()
+    cenario_piso_e_teto()
+    cenario_fair_share_tres()
+    cenario_cota_liberada_cancel()
+    cenario_dia_completo()
     print("Todos os cenários executados. Planilhas em ./saida/")
 
 

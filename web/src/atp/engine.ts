@@ -86,6 +86,21 @@ export class MotorATP {
     this.canais = new Map(canais.map((c) => [c.nome, c]));
     this.reservas = new Map(canais.map((c) => [c.nome, 0]));
     this.vendasPeriodo = new Map(canais.map((c) => [c.nome, 0]));
+    // Uma restrição (instantânea ou acumulada) menor que a proteção do próprio
+    // canal torna a proteção inalcançável: configuração contraditória.
+    for (const c of canais) {
+      if (c.protecao === 0) continue;
+      const piso = Math.min(this.protecaoEfetiva(c.nome), fisico);
+      const tetos = [c.restricao, c.restricaoAcumulada].filter(
+        (t): t is number => t !== null,
+      );
+      if (tetos.length > 0 && Math.min(...tetos) < piso) {
+        throw new ConfiguracaoInvalida(
+          `canal ${c.nome}: restrição ${Math.min(...tetos)} < proteção ${piso}: ` +
+            "o canal nunca alcançaria sua proteção",
+        );
+      }
+    }
     this.registrar("INICIAL", "-", 0, "Estado inicial");
   }
 

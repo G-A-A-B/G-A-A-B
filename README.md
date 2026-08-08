@@ -311,6 +311,10 @@ isolando um comportamento do modelo:
 | 7 | **config inválida** | proteções sobre-comprometidas são recusadas na construção |
 | 8 | **fair-share** | sobre-comprometido rateado proporcionalmente (`fair_share=True`) |
 | 9 | **restrição acumulada** | cota de vendas no período — só reabre no reinício, não ao efetivar |
+| 10 | **piso + teto** | proteção (piso) e restrição (teto) no mesmo canal |
+| 11 | **fair-share 3 canais** | rateio proporcional entre três canais desiguais (60/30/30) |
+| 12 | **cota liberada por cancelamento** | cancelar devolve a cota do período; venda não |
+| 13 | **dia completo** | narrativa de um dia inteiro nos três canais + reinício de período |
 
 ---
 
@@ -427,6 +431,9 @@ Fontes usadas na fundamentação conceitual:
 - **ATP = discreto/instantâneo.**
 - **Sobre-comprometimento = fair-share opcional** (rateio proporcional pelo
   maior resto) ou recusa na construção.
+- **Configurações contraditórias recusadas** na construção
+  (`ConfiguracaoInvalida`): proteções que somam mais que o físico (sem
+  fair-share) e restrição de um canal menor que sua própria proteção.
 - **Interface visual** = app React + MUI/Material 3 em `web/`, com o motor
   portado para TypeScript e paridade validada por testes.
 

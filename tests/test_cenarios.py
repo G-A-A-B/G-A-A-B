@@ -78,6 +78,36 @@ def test_restricao_acumulada_reabre_no_reinicio():
     assert motor.historico[-1].evento == "REINICIO_PERIODO"
 
 
+def test_piso_e_teto_limita_no_teto():
+    motor = v.cenario_piso_e_teto()
+    # A Loja parou no teto de 50 (ultrapassando o piso 20, que é soft).
+    assert motor.reservas["Loja"] == 50
+    assert motor.atp("Loja") == 0
+
+
+def test_fair_share_tres_canais_rateia_60_30_30():
+    motor = v.cenario_fair_share_tres()
+    assert motor.protecao_efetiva("A") == 30
+    assert motor.protecao_efetiva("B") == 15
+    assert motor.protecao_efetiva("C") == 15
+    assert motor.disponivel == 0
+
+
+def test_cota_liberada_por_cancelamento():
+    motor = v.cenario_cota_liberada_cancel()
+    # Vendeu 12 no período; cota restante = 8 (as canceladas voltaram, as
+    # vendidas não).
+    assert motor.vendas_periodo["Marketplace"] == 12
+    assert motor.atp("Marketplace") == 8
+
+
+def test_dia_completo_fecha_e_reabre_cota():
+    motor = v.cenario_dia_completo()
+    assert motor.fisico == 5                       # 100 − 95 vendas no dia
+    assert motor.vendas_periodo["Marketplace"] == 0  # reinício zerou o período
+    assert motor.historico[-1].evento == "REINICIO_PERIODO"
+
+
 def test_main_roda_todos_os_cenarios(capsys):
     v.main()
     saida = capsys.readouterr().out

@@ -46,4 +46,16 @@ export const PRESETS: Preset[] = [
     fairShare: false,
     canais: [c("Marketplace", 0, null, 20), c("Outro")],
   },
+  {
+    rotulo: "Piso + teto (prot 20 / teto 50)",
+    fisico: 100,
+    fairShare: false,
+    canais: [c("Loja", 20, 50), c("Site")],
+  },
+  {
+    rotulo: "Fair-share 3 canais (60/30/30)",
+    fisico: 60,
+    fairShare: true,
+    canais: [c("A", 60), c("B", 30), c("C", 30)],
+  },
 ];

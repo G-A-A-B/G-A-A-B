@@ -127,6 +127,18 @@ class MotorATP:
         self.reservas = {c.nome: 0 for c in canais}
         # Vendas confirmadas no período corrente (para a restrição acumulada).
         self.vendas_periodo = {c.nome: 0 for c in canais}
+        # Uma restrição (instantânea ou acumulada) menor que a proteção do
+        # próprio canal torna a proteção inalcançável: configuração contraditória.
+        for c in canais:
+            if c.protecao == 0:
+                continue
+            piso = min(self.protecao_efetiva(c.nome), fisico)
+            tetos = [t for t in (c.restricao, c.restricao_acumulada) if t is not None]
+            if tetos and min(tetos) < piso:
+                raise ConfiguracaoInvalida(
+                    f"canal {c.nome}: restrição {min(tetos)} < proteção {piso}: "
+                    "o canal nunca alcançaria sua proteção"
+                )
         self.historico: list[Movimento] = []
         self._registrar("INICIAL", "-", 0, "Estado inicial")
 

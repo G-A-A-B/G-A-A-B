@@ -83,4 +83,16 @@ describe("MotorATP — paridade com o simulador Python", () => {
     m.efetivar("Mkt", 8);
     expect(m.atp("Mkt")).toBe(8); // min(instantânea 8, acumulada 20−8=12)
   });
+
+  it("restrição menor que a proteção do mesmo canal é recusada", () => {
+    expect(() => new MotorATP(100, [canal("A", 30, 20)])).toThrow(
+      ConfiguracaoInvalida,
+    );
+  });
+
+  it("proteção com teto maior (piso 20 / teto 50) é válida", () => {
+    const m = new MotorATP(100, [canal("A", 20, 50), canal("B")]);
+    expect(m.atp("A")).toBe(50); // limitado pelo teto
+    expect(m.atp("B")).toBe(80); // 100 − 20 (piso da A)
+  });
 });
