@@ -10,7 +10,8 @@ mesmos números do teste de mesa.
 - **React 18** + **TypeScript** + **Vite**
 - **MUI (Material UI) 6** com tema **inspirado no Material 3** (paleta tonal,
   cantos arredondados, modo claro/escuro)
-- **SheetJS (xlsx)** para exportar o histórico de movimentos em `.xlsx`
+- **write-excel-file** (write-only, mantida e sem advisories conhecidos) para
+  exportar o histórico de movimentos em `.xlsx`
 
 ## Funcionalidades
 
@@ -20,7 +21,8 @@ mesmos números do teste de mesa.
 - Tabela de **Disponibilidade (ATP)** ao vivo — mostra proteção, proteção
   **efetiva** (quando o fair-share está ativo), restrição, reserva e ATP.
 - **Histórico de movimentos** com eventos coloridos e **exportação `.xlsx`**
-  (abas Movimentos + Configuração, igual ao Python).
+  (abas Movimentos + Configuração, com a célula de evento colorida por tipo,
+  igual ao Python).
 - **Cenários prontos** (base, por que proteger, saturação no limite,
   fair-share) no seletor do topo.
 
@@ -52,7 +54,8 @@ npm test          # testes do motor portado (Vitest) — paridade com o Python
 residual, não-oversell, config inválida, fair-share) garantindo que a UI e o
 simulador de referência dão os mesmos resultados.
 
-> Nota: o pacote `xlsx` (SheetJS) na versão do npm tem advisories conhecidos.
-> Como esta é uma ferramenta local de teste de mesa (sem entrada de terceiros),
-> o risco é baixo; para produção, avalie `write-excel-file` ou a distribuição
-> oficial do SheetJS.
+> Nota: a exportação usa `write-excel-file` (write-only, mantida, sem
+> advisories conhecidos) em vez do SheetJS/`xlsx`, cujo pacote npm está
+> abandonado e carrega advisories de leitura. As vulnerabilidades restantes no
+> `npm audit` são do `esbuild` (dependência transitiva do Vite) e afetam apenas
+> o *dev server*, não o build de produção.

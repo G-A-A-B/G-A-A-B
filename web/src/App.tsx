@@ -157,7 +157,11 @@ export default function App() {
             <AtpTable motor={motor} />
             <HistoryTable
               motor={motor}
-              onExport={() => exportarXlsx(motor, "historico_movimentos.xlsx")}
+              onExport={() =>
+                exportarXlsx(motor, "historico_movimentos.xlsx").catch((e) =>
+                  setErro((e as Error).message),
+                )
+              }
             />
           </Box>
         </Box>
