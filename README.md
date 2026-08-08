@@ -310,6 +310,7 @@ isolando um comportamento do modelo:
 | 6 | **saturação no limite** | duas proteções somando exatamente o físico |
 | 7 | **config inválida** | proteções sobre-comprometidas são recusadas na construção |
 | 8 | **fair-share** | sobre-comprometido rateado proporcionalmente (`fair_share=True`) |
+| 9 | **restrição acumulada** | cota de vendas no período — só reabre no reinício, não ao efetivar |
 
 ---
 
@@ -414,8 +415,10 @@ Fontes usadas na fundamentação conceitual:
 
 **Decisões já cravadas:**
 
-- **Restrição = instantânea** (limita reservas simultâneas; o teto reabre ao
-  efetivar/cancelar). Não é cota acumulada por período.
+- **Restrição instantânea** (limita reservas simultâneas; o teto reabre ao
+  efetivar/cancelar) **e/ou acumulada por período** (`restricao_acumulada` —
+  cota de vendas + reservas que só reabre em `reiniciar_periodo()`). Quando as
+  duas estão setadas, vale o menor teto.
 - **Proteção = soft para o dono** (piso garantido, mas ele pode ultrapassar) e
   **hard para os demais** (nunca invadem o piso alheio), via **proteção
   residual**.
@@ -432,7 +435,6 @@ Fontes usadas na fundamentação conceitual:
 - **Prioridade entre canais** no rateio sob escassez (o fair-share atual é
   proporcional; uma variante seria por prioridade/segmento).
 - **Proteção com janela temporal** (expira e libera aos demais após um horário).
-- **Restrição acumulada por período** (cota de vendas) como política alternativa.
 - **ATP time-phased** com recebimentos futuros do CD.
 - **Multi-CD** (mesmo SKU em vários CDs, com regra de sourcing por canal).
 

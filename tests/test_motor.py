@@ -62,6 +62,65 @@ def test_restricao_reabre_ao_efetivar():
 
 
 # --------------------------------------------------------------------------- #
+# Restrição acumulada por período
+# --------------------------------------------------------------------------- #
+def test_restricao_acumulada_conta_reservas_e_vendas():
+    m = MotorATP(fisico=100, canais=[Canal("Mkt", restricao_acumulada=20)])
+    assert m.atp("Mkt") == 20
+    m.reservar("Mkt", 15)
+    assert m.atp("Mkt") == 5              # 20 − 15 reservados
+
+
+def test_restricao_acumulada_nao_reabre_ao_efetivar():
+    m = MotorATP(fisico=100, canais=[Canal("Mkt", restricao_acumulada=20)])
+    m.reservar("Mkt", 15)
+    m.efetivar("Mkt", 15)                 # vira venda; cota NÃO reabre
+    assert m.vendas_periodo["Mkt"] == 15
+    assert m.atp("Mkt") == 5              # (a instantânea reabriria para 20)
+
+
+def test_restricao_acumulada_esgota_a_cota_do_periodo():
+    m = MotorATP(fisico=100, canais=[Canal("Mkt", restricao_acumulada=20)])
+    m.reservar("Mkt", 20)
+    m.efetivar("Mkt", 20)                 # 20 vendas no período
+    assert m.atp("Mkt") == 0
+    with pytest.raises(ErroDeReserva):
+        m.reservar("Mkt", 1)
+
+
+def test_reiniciar_periodo_reabre_a_cota():
+    m = MotorATP(fisico=100, canais=[Canal("Mkt", restricao_acumulada=20)])
+    m.reservar("Mkt", 20)
+    m.efetivar("Mkt", 20)
+    assert m.atp("Mkt") == 0
+    m.reiniciar_periodo()
+    assert m.vendas_periodo["Mkt"] == 0
+    assert m.atp("Mkt") == 20
+    assert m.historico[-1].evento == "REINICIO_PERIODO"
+
+
+def test_cancelamento_libera_cota_acumulada():
+    # Reserva conta contra a cota; cancelar (não vira venda) devolve a cota.
+    m = MotorATP(fisico=100, canais=[Canal("Mkt", restricao_acumulada=20)])
+    m.reservar("Mkt", 20)
+    assert m.atp("Mkt") == 0
+    m.cancelar("Mkt", 20)
+    assert m.atp("Mkt") == 20             # cota reaberta (nada foi vendido)
+
+
+def test_restricao_instantanea_e_acumulada_combinadas():
+    # Instantânea 8 e acumulada 20: o menor teto vale a cada momento.
+    m = MotorATP(
+        fisico=100,
+        canais=[Canal("Mkt", restricao=8, restricao_acumulada=20)],
+    )
+    assert m.atp("Mkt") == 8              # min(instantânea 8, acumulada 20)
+    m.reservar("Mkt", 8)
+    m.efetivar("Mkt", 8)                  # instantânea reabre; acumulada vai a 12
+    assert m.atp("Mkt") == 8              # min(8, 20 − 8 = 12)
+
+
+# --------------------------------------------------------------------------- #
 # Proteção
 # --------------------------------------------------------------------------- #
 def test_protecao_blinda_estoque_dos_outros_canais():

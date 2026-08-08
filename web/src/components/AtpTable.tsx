@@ -17,6 +17,7 @@ export default function AtpTable({ motor }: { motor: MotorATP }) {
   const canais = [...motor.canais.values()];
   const efetivas = motor.protecoesEfetivas();
   const sobrecomprometido = canais.some((c) => efetivas[c.nome] !== c.protecao);
+  const temCota = canais.some((c) => c.restricaoAcumulada !== null);
 
   return (
     <Card variant="outlined">
@@ -40,6 +41,7 @@ export default function AtpTable({ motor }: { motor: MotorATP }) {
                 <TableCell align="right">Proteção</TableCell>
                 {sobrecomprometido && <TableCell align="right">Efetiva</TableCell>}
                 <TableCell align="right">Restrição</TableCell>
+                {temCota && <TableCell align="right">Cota período</TableCell>}
                 <TableCell align="right">Reserva</TableCell>
                 <TableCell align="right">ATP</TableCell>
               </TableRow>
@@ -55,6 +57,13 @@ export default function AtpTable({ motor }: { motor: MotorATP }) {
                       <TableCell align="right">{efetivas[c.nome] || "—"}</TableCell>
                     )}
                     <TableCell align="right">{c.restricao ?? "sem teto"}</TableCell>
+                    {temCota && (
+                      <TableCell align="right">
+                        {c.restricaoAcumulada === null
+                          ? "—"
+                          : `${motor.vendasDe(c.nome)} / ${c.restricaoAcumulada}`}
+                      </TableCell>
+                    )}
                     <TableCell align="right">{motor.reservaDe(c.nome)}</TableCell>
                     <TableCell align="right">
                       <Chip

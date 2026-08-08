@@ -19,6 +19,7 @@ export interface CanalCfg {
   nome: string;
   protecao: number;
   restricao: number | null;
+  restricaoAcumulada: number | null;
 }
 
 interface Props {
@@ -46,7 +47,10 @@ export default function ConfigPanel({
   };
   const remover = (i: number) => onCanais(canais.filter((_, idx) => idx !== i));
   const adicionar = () =>
-    onCanais([...canais, { nome: `Canal ${canais.length + 1}`, protecao: 0, restricao: null }]);
+    onCanais([
+      ...canais,
+      { nome: `Canal ${canais.length + 1}`, protecao: 0, restricao: null, restricaoAcumulada: null },
+    ]);
 
   return (
     <Card variant="outlined">
@@ -93,7 +97,7 @@ export default function ConfigPanel({
                 sx={{ width: 110 }}
               />
               <TextField
-                label="Restrição"
+                label="Restr. inst."
                 type="number"
                 size="small"
                 placeholder="sem teto"
@@ -101,6 +105,20 @@ export default function ConfigPanel({
                 onChange={(e) =>
                   setCanal(i, {
                     restricao: e.target.value === "" ? null : Math.max(0, Number(e.target.value)),
+                  })
+                }
+                sx={{ width: 110 }}
+              />
+              <TextField
+                label="Cota/período"
+                type="number"
+                size="small"
+                placeholder="sem cota"
+                value={c.restricaoAcumulada ?? ""}
+                onChange={(e) =>
+                  setCanal(i, {
+                    restricaoAcumulada:
+                      e.target.value === "" ? null : Math.max(0, Number(e.target.value)),
                   })
                 }
                 sx={{ width: 120 }}

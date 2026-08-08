@@ -16,6 +16,7 @@ const COR_EVENTO: Record<TipoEvento, `#${string}`> = {
   RESERVA: "#FFE699",
   EFETIVACAO: "#C6EFCE",
   CANCELAMENTO: "#FFC7CE",
+  REINICIO_PERIODO: "#BDD7EE",
 };
 
 const cab = (value: string): CellObject => ({

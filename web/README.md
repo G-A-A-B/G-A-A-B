@@ -15,11 +15,13 @@ mesmos números do teste de mesa.
 
 ## Funcionalidades
 
-- Configurar **físico**, **canais** (nome, proteção, restrição) e **fair-share**.
-- Operar **Reservar / Efetivar / Cancelar** por canal; erros (ATP excedido,
-  etc.) aparecem em *snackbar*.
+- Configurar **físico**, **canais** (nome, proteção, restrição instantânea e
+  cota acumulada por período) e **fair-share**.
+- Operar **Reservar / Efetivar / Cancelar** por canal e **Reiniciar período**
+  (reabre as cotas acumuladas); erros (ATP excedido, etc.) em *snackbar*.
 - Tabela de **Disponibilidade (ATP)** ao vivo — mostra proteção, proteção
-  **efetiva** (quando o fair-share está ativo), restrição, reserva e ATP.
+  **efetiva** (quando o fair-share está ativo), restrição, **cota do período**
+  (vendas/cota, quando há restrição acumulada), reserva e ATP.
 - **Histórico de movimentos** com eventos coloridos e **exportação `.xlsx`**
   (abas Movimentos + Configuração, com a célula de evento colorida por tipo,
   igual ao Python).
@@ -43,6 +45,10 @@ npm test          # testes do motor portado (Vitest) — paridade com o Python
 
 ![Operações](docs/screenshot-operacoes.png)
 *Após reservar e efetivar: histórico colorido e ATP recalculado ao vivo.*
+
+![Restrição acumulada](docs/screenshot-restricao-acumulada.png)
+*Restrição acumulada: coluna "Cota período" (0/20 após reinício) e o evento
+REINICIO_PERIODO no histórico.*
 
 ![Fair-share (modo escuro)](docs/screenshot-fairshare-dark.png)
 *Fair-share: proteções 60 + 60 rateadas em 50 + 50 (coluna "Efetiva").*

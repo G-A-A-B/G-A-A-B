@@ -11,12 +11,14 @@ import {
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 interface Props {
   canais: string[];
   onReservar: (canal: string, qtd: number) => void;
   onEfetivar: (canal: string, qtd: number) => void;
   onCancelar: (canal: string, qtd: number) => void;
+  onReiniciarPeriodo: () => void;
 }
 
 export default function OperationsPanel({
@@ -24,6 +26,7 @@ export default function OperationsPanel({
   onReservar,
   onEfetivar,
   onCancelar,
+  onReiniciarPeriodo,
 }: Props) {
   const [canal, setCanal] = useState(canais[0] ?? "");
   const [qtd, setQtd] = useState(10);
@@ -85,6 +88,15 @@ export default function OperationsPanel({
             Cancelar
           </Button>
         </Stack>
+        <Button
+          variant="text"
+          size="small"
+          startIcon={<RestartAltIcon />}
+          onClick={onReiniciarPeriodo}
+          sx={{ mt: 1.5 }}
+        >
+          Reiniciar período (reabre cotas acumuladas)
+        </Button>
       </CardContent>
     </Card>
   );

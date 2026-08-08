@@ -55,18 +55,27 @@ class Canal:
     """Configuração de um canal de venda.
 
     protecao:  unidades garantidas a ESTE canal (blinda dos demais). 0 = sem proteção.
-    restricao: teto de reservas simultâneas deste canal. None = sem teto.
+    restricao: teto INSTANTÂNEO de reservas simultâneas. None = sem teto.
+               Reabre ao efetivar/cancelar.
+    restricao_acumulada: cota de vendas confirmadas + reservas ativas no
+               PERÍODO. None = sem cota. Só reabre em reiniciar_periodo(), não
+               ao efetivar (efetivar apenas converte reserva em venda).
     """
 
     nome: str
     protecao: int = 0
     restricao: int | None = None
+    restricao_acumulada: int | None = None
 
     def __post_init__(self) -> None:
         if self.protecao < 0:
             raise ValueError(f"proteção do canal {self.nome} não pode ser negativa")
         if self.restricao is not None and self.restricao < 0:
             raise ValueError(f"restrição do canal {self.nome} não pode ser negativa")
+        if self.restricao_acumulada is not None and self.restricao_acumulada < 0:
+            raise ValueError(
+                f"restrição acumulada do canal {self.nome} não pode ser negativa"
+            )
 
 
 @dataclass
@@ -116,6 +125,8 @@ class MotorATP:
         self.fisico = fisico
         self.canais = {c.nome: c for c in canais}
         self.reservas = {c.nome: 0 for c in canais}
+        # Vendas confirmadas no período corrente (para a restrição acumulada).
+        self.vendas_periodo = {c.nome: 0 for c in canais}
         self.historico: list[Movimento] = []
         self._registrar("INICIAL", "-", 0, "Estado inicial")
 
@@ -174,14 +185,23 @@ class MotorATP:
         )
         sobra = self.disponivel - blindagem_alheia
 
-        # Teto instantâneo do próprio canal (restrição menos o já reservado).
-        restricao = self.canais[nome].restricao
-        if restricao is None:
-            teto = sobra  # sem restrição: não limita
-        else:
-            teto = restricao - self.reservas[nome]
+        canal = self.canais[nome]
+        limites = [sobra]
 
-        return max(0, min(sobra, teto))
+        # Teto INSTANTÂNEO: restrição menos o já reservado (reabre ao efetivar).
+        if canal.restricao is not None:
+            limites.append(canal.restricao - self.reservas[nome])
+
+        # Teto ACUMULADO: cota do período menos vendas já confirmadas e reservas
+        # ativas (só reabre em reiniciar_periodo, não ao efetivar).
+        if canal.restricao_acumulada is not None:
+            limites.append(
+                canal.restricao_acumulada
+                - self.vendas_periodo[nome]
+                - self.reservas[nome]
+            )
+
+        return max(0, min(limites))
 
     def snapshot(self) -> dict[str, int]:
         """ATP corrente de todos os canais (para inspeção/log do teste de mesa)."""
@@ -218,8 +238,20 @@ class MotorATP:
             )
         self.reservas[nome] -= quantidade
         self.fisico -= quantidade
+        # Venda confirmada conta contra a cota acumulada do período.
+        self.vendas_periodo[nome] += quantidade
         self._checar_invariantes()
         self._registrar("EFETIVACAO", nome, quantidade, rotulo)
+
+    def reiniciar_periodo(self, rotulo: str = "Reinício de período") -> None:
+        """Zera as vendas do período, reabrindo as cotas de restrição acumulada.
+
+        Modela a virada de dia/semana: só aqui a restrição acumulada volta ao
+        teto cheio (a instantânea, essa reabre a cada efetivação/cancelamento).
+        """
+        for nome in self.vendas_periodo:
+            self.vendas_periodo[nome] = 0
+        self._registrar("REINICIO_PERIODO", "-", 0, rotulo)
 
     def cancelar(self, nome: str, quantidade: int, rotulo: str = "") -> None:
         """Cancela parte da reserva do canal (físico permanece inalterado)."""

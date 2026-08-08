@@ -63,4 +63,24 @@ describe("MotorATP — paridade com o simulador Python", () => {
     const ef = m.protecoesEfetivas();
     expect(ef.A + ef.B).toBe(75);
   });
+
+  it("restrição acumulada NÃO reabre ao efetivar, só no reinício", () => {
+    const m = new MotorATP(100, [canal("Mkt", 0, null, 20)]);
+    expect(m.atp("Mkt")).toBe(20);
+    m.reservar("Mkt", 20);
+    m.efetivar("Mkt", 20);
+    expect(m.atp("Mkt")).toBe(0); // instantânea reabriria; acumulada não
+    m.reiniciarPeriodo();
+    expect(m.vendasDe("Mkt")).toBe(0);
+    expect(m.atp("Mkt")).toBe(20);
+    expect(m.historico[m.historico.length - 1].evento).toBe("REINICIO_PERIODO");
+  });
+
+  it("instantânea e acumulada combinadas: vale o menor teto", () => {
+    const m = new MotorATP(100, [canal("Mkt", 0, 8, 20)]);
+    expect(m.atp("Mkt")).toBe(8);
+    m.reservar("Mkt", 8);
+    m.efetivar("Mkt", 8);
+    expect(m.atp("Mkt")).toBe(8); // min(instantânea 8, acumulada 20−8=12)
+  });
 });

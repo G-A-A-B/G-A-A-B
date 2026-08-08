@@ -12,6 +12,7 @@ Cenários:
   6. saturacao_no_limite   — duas proteções somando exatamente o físico
   7. config_invalida       — proteções sobre-comprometidas são recusadas
   8. fair_share            — sobre-comprometido rateado proporcionalmente
+  9. restricao_acumulada   — cota de vendas no período (só reabre no reinício)
 """
 
 from __future__ import annotations
@@ -170,6 +171,30 @@ def cenario_fair_share() -> MotorATP:
     return motor
 
 
+def cenario_restricao_acumulada() -> MotorATP:
+    """Cota de vendas no período: NÃO reabre ao efetivar, só no reinício."""
+    motor = MotorATP(
+        fisico=100,
+        canais=[Canal("Marketplace", restricao_acumulada=20), Canal("Outro")],
+    )
+    titulo("9) RESTRIÇÃO ACUMULADA — cota de 20 vendas/período (Marketplace)")
+
+    evento(motor, "T0  Estado inicial  (cota do período = 20)")
+    motor.reservar("Marketplace", 15, "T1 Marketplace reserva 15")
+    evento(motor, "T1  Marketplace reserva 15  (cota 20 − 15 = 5)")
+    motor.efetivar("Marketplace", 15, "T2 Marketplace efetiva 15")
+    evento(motor, "T2  Marketplace efetiva 15  (cota NÃO reabre: segue em 5)")
+    motor.reservar("Marketplace", 5, "T3 Marketplace reserva 5")
+    motor.efetivar("Marketplace", 5, "T4 Marketplace efetiva 5")
+    evento(motor, "T4  vendeu +5 no período  (cota esgotada → ATP 0)")
+    tentar_reservar(motor, "Marketplace", 1, "T5  tenta reservar 1  (cota do período esgotada)")
+    motor.reiniciar_periodo("T6 vira o dia")
+    evento(motor, "T6  Reinício de período  (cota REABRE → ATP 20)")
+
+    finalizar(motor, "cenario_restricao_acumulada.xlsx")
+    return motor
+
+
 def main() -> None:
     cenario_base()
     cenario_cancelamento()
@@ -180,6 +205,7 @@ def main() -> None:
     cenario_saturacao_no_limite()
     cenario_config_invalida()
     cenario_fair_share()
+    cenario_restricao_acumulada()
     print("Todos os cenários executados. Planilhas em ./saida/")
 
 

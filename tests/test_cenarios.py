@@ -70,6 +70,14 @@ def test_fair_share_rateia_e_honra_ambos():
     assert motor.disponivel == 0
 
 
+def test_restricao_acumulada_reabre_no_reinicio():
+    motor = v.cenario_restricao_acumulada()
+    # Após o reinício de período, a cota volta ao teto cheio.
+    assert motor.vendas_periodo["Marketplace"] == 0
+    assert motor.atp("Marketplace") == 20
+    assert motor.historico[-1].evento == "REINICIO_PERIODO"
+
+
 def test_main_roda_todos_os_cenarios(capsys):
     v.main()
     saida = capsys.readouterr().out

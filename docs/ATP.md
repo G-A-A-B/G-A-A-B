@@ -155,8 +155,12 @@ Um **limite** de quanto um canal pode consumir, para favorecer os demais.
 | **Instantânea** | Reservas **simultâneas** do canal | Sim, ao efetivar/cancelar | Balancear disponibilidade entre canais |
 | **Acumulada por período** | Vendas **confirmadas** no período | Não, só no reset (dia/semana) | Cota comercial ("Mkt vende ≤ 20/dia") |
 
-> **Neste simulador:** a restrição é **instantânea** — o teto limita reservas
-> ativas e reabre quando elas são efetivadas ou canceladas.
+> **Neste simulador:** ambas as semânticas existem e podem coexistir num mesmo
+> canal. A **instantânea** (`restricao`) limita reservas ativas e reabre ao
+> efetivar/cancelar. A **acumulada** (`restricao_acumulada`) limita vendas +
+> reservas do período e só reabre em `reiniciar_periodo()` — efetivar apenas
+> converte reserva em venda, sem reabrir a cota. Com as duas setadas, vale o
+> menor teto.
 
 ### 4.3 Proteções sobre-comprometidas e fair-share
 

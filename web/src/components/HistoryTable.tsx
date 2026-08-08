@@ -17,12 +17,13 @@ import type { MotorATP, TipoEvento } from "../atp/engine";
 
 const COR_EVENTO: Record<
   TipoEvento,
-  "default" | "warning" | "success" | "error"
+  "default" | "warning" | "success" | "error" | "primary"
 > = {
   INICIAL: "default",
   RESERVA: "warning",
   EFETIVACAO: "success",
   CANCELAMENTO: "error",
+  REINICIO_PERIODO: "primary",
 };
 
 export default function HistoryTable({

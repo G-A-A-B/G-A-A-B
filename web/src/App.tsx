@@ -29,7 +29,7 @@ import { PRESETS } from "./presets";
 function construir(fisico: number, canais: CanalCfg[], fairShare: boolean): MotorATP {
   return new MotorATP(
     fisico,
-    canais.map((c) => criarCanal(c.nome, c.protecao, c.restricao)),
+    canais.map((c) => criarCanal(c.nome, c.protecao, c.restricao, c.restricaoAcumulada)),
     fairShare,
   );
 }
@@ -143,6 +143,7 @@ export default function App() {
               onReservar={(c, q) => operar((m) => m.reservar(c, q))}
               onEfetivar={(c, q) => operar((m) => m.efetivar(c, q))}
               onCancelar={(c, q) => operar((m) => m.cancelar(c, q))}
+              onReiniciarPeriodo={() => operar((m) => m.reiniciarPeriodo())}
             />
           </Box>
           <Box

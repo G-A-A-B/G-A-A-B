@@ -18,22 +18,32 @@ export interface Canal {
   nome: string;
   /** Unidades garantidas a este canal (blinda dos demais). 0 = sem proteção. */
   protecao: number;
-  /** Teto de reservas simultâneas. null = sem teto. */
+  /** Teto INSTANTÂNEO de reservas simultâneas (reabre ao efetivar). null = sem teto. */
   restricao: number | null;
+  /** Cota de vendas + reservas no PERÍODO (só reabre no reinício). null = sem cota. */
+  restricaoAcumulada: number | null;
 }
 
 export function canal(
   nome: string,
   protecao = 0,
   restricao: number | null = null,
+  restricaoAcumulada: number | null = null,
 ): Canal {
   if (protecao < 0) throw new Error(`proteção de ${nome} não pode ser negativa`);
   if (restricao !== null && restricao < 0)
     throw new Error(`restrição de ${nome} não pode ser negativa`);
-  return { nome, protecao, restricao };
+  if (restricaoAcumulada !== null && restricaoAcumulada < 0)
+    throw new Error(`restrição acumulada de ${nome} não pode ser negativa`);
+  return { nome, protecao, restricao, restricaoAcumulada };
 }
 
-export type TipoEvento = "INICIAL" | "RESERVA" | "EFETIVACAO" | "CANCELAMENTO";
+export type TipoEvento =
+  | "INICIAL"
+  | "RESERVA"
+  | "EFETIVACAO"
+  | "CANCELAMENTO"
+  | "REINICIO_PERIODO";
 
 export interface Movimento {
   seq: number;
@@ -58,6 +68,8 @@ export class MotorATP {
   readonly fairShare: boolean;
   readonly canais: Map<string, Canal>;
   readonly reservas: Map<string, number>;
+  /** Vendas confirmadas no período corrente (para a restrição acumulada). */
+  readonly vendasPeriodo: Map<string, number>;
   readonly historico: Movimento[] = [];
 
   constructor(fisico: number, canais: Canal[], fairShare = false) {
@@ -73,7 +85,12 @@ export class MotorATP {
     this.fisico = fisico;
     this.canais = new Map(canais.map((c) => [c.nome, c]));
     this.reservas = new Map(canais.map((c) => [c.nome, 0]));
+    this.vendasPeriodo = new Map(canais.map((c) => [c.nome, 0]));
     this.registrar("INICIAL", "-", 0, "Estado inicial");
+  }
+
+  vendasDe(nome: string): number {
+    return this.vendasPeriodo.get(nome) ?? 0;
   }
 
   // ----------------------------------------------------------------- //
@@ -139,13 +156,21 @@ export class MotorATP {
       if (k !== nome) blindagemAlheia += this.protecaoResidual(k);
     }
     const sobra = this.disponivel - blindagemAlheia;
+    const limites = [sobra];
 
-    const teto =
-      canal.restricao === null
-        ? sobra
-        : canal.restricao - this.reservaDe(nome);
+    // Teto INSTANTÂNEO: restrição menos o já reservado (reabre ao efetivar).
+    if (canal.restricao !== null) {
+      limites.push(canal.restricao - this.reservaDe(nome));
+    }
+    // Teto ACUMULADO: cota do período menos vendas confirmadas e reservas
+    // ativas (só reabre em reiniciarPeriodo, não ao efetivar).
+    if (canal.restricaoAcumulada !== null) {
+      limites.push(
+        canal.restricaoAcumulada - this.vendasDe(nome) - this.reservaDe(nome),
+      );
+    }
 
-    return Math.max(0, Math.min(sobra, teto));
+    return Math.max(0, Math.min(...limites));
   }
 
   snapshot(): Record<string, number> {
@@ -185,8 +210,16 @@ export class MotorATP {
     }
     this.reservas.set(nome, this.reservaDe(nome) - quantidade);
     this.fisico -= quantidade;
+    // Venda confirmada conta contra a cota acumulada do período.
+    this.vendasPeriodo.set(nome, this.vendasDe(nome) + quantidade);
     this.checarInvariantes();
     this.registrar("EFETIVACAO", nome, quantidade, rotulo);
+  }
+
+  reiniciarPeriodo(rotulo = "Reinício de período"): void {
+    // Zera as vendas do período, reabrindo as cotas de restrição acumulada.
+    for (const nome of this.vendasPeriodo.keys()) this.vendasPeriodo.set(nome, 0);
+    this.registrar("REINICIO_PERIODO", "-", 0, rotulo);
   }
 
   cancelar(nome: string, quantidade: number, rotulo = ""): void {
