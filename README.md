@@ -11,6 +11,14 @@ chain (ver [Fundamentação](#2-fundamentação-conceitual) e
 [Referências](#12-referências)): reservam-se cotas de estoque por canal e os
 pedidos as consomem em tempo real, sem furar promessas nem provocar oversell.
 
+Há **duas frentes**: o **simulador Python** de referência (`estoque_atp/`,
+validado por testes e com teste de mesa exportável para `.xlsx`) e um **app
+visual React + MUI/Material 3** (`web/`) que porta o mesmo motor para o
+navegador — configuração de canais, operações interativas, tabela de ATP ao
+vivo e exportação do histórico. Veja [`web/README.md`](web/README.md).
+
+![App visual — cenário base](web/docs/screenshot-base.png)
+
 ---
 
 ## Sumário
@@ -252,6 +260,9 @@ tests/
   test_cenarios.py   Fumaça de todos os cenários
 docs/
   ATP.md             Documentação de referência do modelo e variações
+web/                 App visual React + MUI/Material 3 (motor portado p/ TS)
+  src/atp/engine.ts  Port TypeScript do motor (paridade validada por testes)
+  src/components/     ConfigPanel, AtpTable, OperationsPanel, HistoryTable
 pyproject.toml       Metadados e dependências (openpyxl)
 ```
 
@@ -411,6 +422,10 @@ Fontes usadas na fundamentação conceitual:
 - **Efetivação = atômica** (libera reserva e baixa físico juntos), fechando a
   janela de oversell.
 - **ATP = discreto/instantâneo.**
+- **Sobre-comprometimento = fair-share opcional** (rateio proporcional pelo
+  maior resto) ou recusa na construção.
+- **Interface visual** = app React + MUI/Material 3 em `web/`, com o motor
+  portado para TypeScript e paridade validada por testes.
 
 **Próximos passos (cada um isolando uma variação):**
 
