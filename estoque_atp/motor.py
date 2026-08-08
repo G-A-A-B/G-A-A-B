@@ -101,14 +101,17 @@ class MotorATP:
     canais: dict[str, Canal] = field(default_factory=dict)
     reservas: dict[str, int] = field(default_factory=dict)
 
-    def __init__(self, fisico: int, canais: list[Canal]) -> None:
+    def __init__(
+        self, fisico: int, canais: list[Canal], fair_share: bool = False
+    ) -> None:
         if fisico < 0:
             raise ValueError("estoque físico não pode ser negativo")
+        self.fair_share = fair_share
         soma_protecoes = sum(c.protecao for c in canais)
-        if soma_protecoes > fisico:
+        if soma_protecoes > fisico and not fair_share:
             raise ConfiguracaoInvalida(
                 f"proteções somam {soma_protecoes} > físico {fisico}: "
-                "impossível honrar todas (use rateio/fair-share para este caso)"
+                "impossível honrar todas (habilite fair_share para ratear)"
             )
         self.fisico = fisico
         self.canais = {c.nome: c for c in canais}
@@ -128,10 +131,37 @@ class MotorATP:
         """Físico menos tudo que está reservado (por qualquer canal)."""
         return self.fisico - self.reservas_totais
 
+    def protecao_efetiva(self, nome: str) -> int:
+        """Proteção que o canal efetivamente recebe.
+
+        Se as proteções cabem no físico, é a própria proteção configurada.
+        Se estão sobre-comprometidas (Σ proteções > físico) e o fair_share está
+        ligado, o físico é rateado proporcionalmente às proteções, pelo método
+        do maior resto (as fatias somam exatamente o físico).
+        """
+        return self._protecoes_efetivas()[nome]
+
+    def _protecoes_efetivas(self) -> dict[str, int]:
+        protecoes = {n: c.protecao for n, c in self.canais.items()}
+        soma = sum(protecoes.values())
+        if soma == 0 or soma <= self.fisico:
+            return protecoes  # cabem no físico: cada canal recebe sua proteção
+
+        # Sobre-comprometido: rateio proporcional pelo método do maior resto.
+        exatas = {n: self.fisico * p / soma for n, p in protecoes.items()}
+        base = {n: int(v) for n, v in exatas.items()}
+        resto = self.fisico - sum(base.values())
+        # Distribui as `resto` unidades aos maiores restos fracionários.
+        ordem = sorted(
+            protecoes, key=lambda n: (exatas[n] - base[n], protecoes[n]), reverse=True
+        )
+        for n in ordem[:resto]:
+            base[n] += 1
+        return base
+
     def protecao_residual(self, nome: str) -> int:
-        """Parte da proteção do canal ainda não consumida por suas reservas."""
-        canal = self.canais[nome]
-        return max(0, canal.protecao - self.reservas[nome])
+        """Parte da proteção efetiva do canal ainda não consumida por reservas."""
+        return max(0, self.protecao_efetiva(nome) - self.reservas[nome])
 
     def atp(self, nome: str) -> int:
         """Quantidade que o canal pode reservar AGORA sem quebrar compromissos."""
@@ -217,13 +247,13 @@ class MotorATP:
             raise ViolacaoDeInvariante(f"disponível negativo: {self.disponivel}")
 
         # 2. Proteção honrada: cada canal protegido consegue alcançar sua
-        #    proteção (limitada pelo físico), somando o que já reservou ao que
-        #    ainda pode reservar (ATP).
+        #    proteção EFETIVA (a própria proteção, ou a fatia do fair-share
+        #    quando sobre-comprometido), somando o já reservado ao ATP.
         for nome, canal in self.canais.items():
             if canal.protecao == 0:
                 continue
             alcancavel = self.reservas[nome] + self.atp(nome)
-            alvo = min(canal.protecao, self.fisico)
+            alvo = min(self.protecao_efetiva(nome), self.fisico)
             if alcancavel < alvo:
                 raise ViolacaoDeInvariante(
                     f"proteção violada em {nome}: alcançável {alcancavel} < alvo {alvo}"

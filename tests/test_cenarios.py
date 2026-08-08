@@ -62,6 +62,14 @@ def test_ruptura_e_config_invalida_nao_levantam():
     v.cenario_config_invalida()
 
 
+def test_fair_share_rateia_e_honra_ambos():
+    motor = v.cenario_fair_share()
+    assert motor.fair_share is True
+    assert motor.protecao_efetiva("A") == 50
+    assert motor.protecao_efetiva("B") == 50
+    assert motor.disponivel == 0
+
+
 def test_main_roda_todos_os_cenarios(capsys):
     v.main()
     saida = capsys.readouterr().out

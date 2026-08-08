@@ -167,10 +167,11 @@ proteções "estouram". Estratégias de mercado:
 - **Fair-share / rateio proporcional**: quando aperta, distribui o disponível
   proporcionalmente às proteções, em vez de "primeiro a chegar leva tudo".
 
-> **Neste simulador:** proteções sobre-comprometidas são **recusadas na
-> construção** (`ConfiguracaoInvalida`) — não faz sentido garantir cotas que
-> não cabem no físico. O rateio por prioridade/fair-share, que trataria esse
-> caso em vez de recusá-lo, é um próximo passo (§10).
+> **Neste simulador:** por padrão, proteções sobre-comprometidas são
+> **recusadas na construção** (`ConfiguracaoInvalida`). Habilitando
+> `fair_share=True`, o físico é **rateado proporcionalmente** às proteções
+> (método do maior resto, as fatias somam exatamente o físico) e a proteção
+> efetiva de cada canal passa a ser sua fatia.
 
 ---
 
@@ -307,8 +308,8 @@ políticas de cada canal).
 
 Extensões naturais, cada uma isolando uma variação do modelo:
 
-- **Rateio por prioridade / fair-share** quando as proteções estão
-  sobre-comprometidas (hoje são recusadas na construção com `ConfiguracaoInvalida`).
+- **Rateio por prioridade/segmento** sob escassez (o fair-share atual é
+  proporcional; uma variante seria priorizar canais mais rentáveis — cf. PTP).
 - **Proteção com janela temporal** (expira num horário e libera aos demais).
 - **Restrição acumulada por período** (cota de vendas, além da instantânea).
 - **ATP time-phased** com recebimentos futuros do CD (§3.2).

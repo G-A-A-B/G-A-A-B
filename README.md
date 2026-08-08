@@ -156,7 +156,8 @@ foca na **diferenciação de demanda por canal**.
 - **Restrição:** **instantânea** (limita reservas simultâneas) · acumulada por
   período (cota de vendas).
 - **Sobre-comprometimento** (Σ proteções > físico): **rejeitar na construção**
-  (atual — `ConfiguracaoInvalida`) · *fair-share* (rateio proporcional, roadmap).
+  (padrão — `ConfiguracaoInvalida`) ou **fair-share** (rateio proporcional pelo
+  método do maior resto) habilitando `fair_share=True`.
 
 ---
 
@@ -297,6 +298,7 @@ isolando um comportamento do modelo:
 | 5 | **restrição instantânea** | o teto reabre ao efetivar/cancelar |
 | 6 | **saturação no limite** | duas proteções somando exatamente o físico |
 | 7 | **config inválida** | proteções sobre-comprometidas são recusadas na construção |
+| 8 | **fair-share** | sobre-comprometido rateado proporcionalmente (`fair_share=True`) |
 
 ---
 
@@ -412,8 +414,8 @@ Fontes usadas na fundamentação conceitual:
 
 **Próximos passos (cada um isolando uma variação):**
 
-- **Fair-share / prioridade** no rateio quando as proteções estão
-  sobre-comprometidas (hoje são recusadas na construção com `ConfiguracaoInvalida`).
+- **Prioridade entre canais** no rateio sob escassez (o fair-share atual é
+  proporcional; uma variante seria por prioridade/segmento).
 - **Proteção com janela temporal** (expira e libera aos demais após um horário).
 - **Restrição acumulada por período** (cota de vendas) como política alternativa.
 - **ATP time-phased** com recebimentos futuros do CD.

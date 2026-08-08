@@ -176,6 +176,42 @@ def test_protecoes_somando_exatamente_o_fisico_sao_validas():
     assert m.disponivel == 0
 
 
+def test_fair_share_rateia_proporcionalmente():
+    # 60 + 60 > 100: com fair_share, cada canal recebe 50 (rateio proporcional).
+    m = MotorATP(
+        fisico=100,
+        canais=[Canal("A", protecao=60), Canal("B", protecao=60)],
+        fair_share=True,
+    )
+    assert m.protecao_efetiva("A") == 50
+    assert m.protecao_efetiva("B") == 50
+    assert m.atp("A") == 50
+    assert m.atp("B") == 50
+    m.reservar("A", 50)
+    m.reservar("B", 50)
+    assert m.disponivel == 0
+
+
+def test_fair_share_soma_das_fatias_e_exatamente_o_fisico():
+    # Rateio com resto: 50 + 50 sobre físico 75 → fatias somam 75.
+    m = MotorATP(
+        fisico=75,
+        canais=[Canal("A", protecao=50), Canal("B", protecao=50)],
+        fair_share=True,
+    )
+    efetivas = m._protecoes_efetivas()
+    assert sum(efetivas.values()) == 75
+    assert set(efetivas.values()) == {37, 38}
+
+
+def test_fair_share_nao_altera_protecao_quando_cabe_no_fisico():
+    # Sem sobre-comprometimento, a proteção efetiva é a própria proteção.
+    m = MotorATP(fisico=100, canais=[Canal("A", protecao=30), Canal("B")], fair_share=True)
+    assert m.protecao_efetiva("A") == 30
+    assert m.atp("A") == 100
+    assert m.atp("B") == 70
+
+
 def test_protecao_maior_que_fisico_apos_vendas_nao_gera_atp_negativo():
     # Config válida (proteção 60 ≤ físico 100), mas vendas derrubam o físico
     # abaixo da proteção. O ATP deve saturar em 0, nunca negativo.

@@ -11,6 +11,7 @@ Cenários:
   5. restricao_reabre      — o teto instantâneo reabre ao efetivar/cancelar
   6. saturacao_no_limite   — duas proteções somando exatamente o físico
   7. config_invalida       — proteções sobre-comprometidas são recusadas
+  8. fair_share            — sobre-comprometido rateado proporcionalmente
 """
 
 from __future__ import annotations
@@ -143,8 +144,30 @@ def cenario_config_invalida() -> None:
         print("  (não deveria chegar aqui)")
     except ConfiguracaoInvalida as erro:
         print(f"  ⛔ RECUSADO na construção: {erro}")
-        print("  → este é o caso que uma política de fair-share trataria (roadmap).")
+        print("  → habilite fair_share=True para ratear em vez de recusar (cenário 8).")
     print("-" * 72 + "\n")
+
+
+def cenario_fair_share() -> MotorATP:
+    """Sobre-comprometido COM fair_share: o físico é rateado proporcionalmente."""
+    motor = MotorATP(
+        fisico=100,
+        canais=[Canal("A", protecao=60), Canal("B", protecao=60)],
+        fair_share=True,
+    )
+    titulo("8) FAIR-SHARE — proteções 60 + 60 > 100 rateadas em 50 + 50")
+
+    print("     Σ proteções = 120 > físico 100 → rateio proporcional:")
+    print(f"     proteções efetivas = {motor._protecoes_efetivas()}")
+    print("-" * 72)
+    evento(motor, "T0  Estado inicial  (cada canal recebe sua fatia de 50)")
+    motor.reservar("A", 50, "T1 A reserva 50")
+    evento(motor, "T1  A reserva 50  (sua fatia rateada)")
+    motor.reservar("B", 50, "T2 B reserva 50")
+    evento(motor, "T2  B reserva 50  (disponível zera; ambos honrados)")
+
+    finalizar(motor, "cenario_fair_share.xlsx")
+    return motor
 
 
 def main() -> None:
@@ -156,6 +179,7 @@ def main() -> None:
     cenario_restricao_reabre()
     cenario_saturacao_no_limite()
     cenario_config_invalida()
+    cenario_fair_share()
     print("Todos os cenários executados. Planilhas em ./saida/")
 
 
