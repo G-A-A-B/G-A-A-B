@@ -13,6 +13,23 @@ O estoque é organizado em **posições** identificadas por
 **(SKU, Centro de Distribuição)**, cada uma com físico, canais e reservas
 próprios. A **chave da reserva** é **SKU + Centro + canal**.
 
+## Telas
+
+![Posição SKU-1001 @ CD-SP com reservas](web/docs/screenshot-multiposicao.png)
+*Posição `SKU-1001 @ CD-SP`: seletor de posição na barra, tabela de ATP,
+histórico de movimentos e reservas com "Novo físico" + Efetivar/Cancelar.*
+
+![Outra posição, independente](web/docs/screenshot-posicao-2.png)
+*`SKU-1001 @ CD-RJ`: outra posição, com físico, canais, histórico e reservas
+próprios — totalmente independente da anterior.*
+
+![Ajuste de quantidade (+/−)](web/docs/screenshot-ajuste.png)
+*Ajuste +/− da quantidade de uma reserva RESERVED (controles "− 42 +"), com os
+eventos AJUSTE no histórico e o disponível/ATP recalculados a cada passo.*
+
+![Modo escuro](web/docs/screenshot-multiposicao-dark.png)
+*Modo escuro (tema Material 3).*
+
 ## Começar
 
 ```bash
