@@ -14,6 +14,7 @@ import type { MotorATP, TipoEvento } from "./engine";
 const COR_EVENTO: Record<TipoEvento, `#${string}`> = {
   INICIAL: "#D9D9D9",
   RESERVA: "#FFE699",
+  AJUSTE: "#DDEBF7",
   EFETIVACAO: "#C6EFCE",
   CANCELAMENTO: "#FFC7CE",
   REINICIO_PERIODO: "#BDD7EE",

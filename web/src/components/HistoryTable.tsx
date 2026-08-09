@@ -17,10 +17,11 @@ import type { MotorATP, TipoEvento } from "../atp/engine";
 
 const COR_EVENTO: Record<
   TipoEvento,
-  "default" | "warning" | "success" | "error" | "primary"
+  "default" | "warning" | "success" | "error" | "primary" | "info"
 > = {
   INICIAL: "default",
   RESERVA: "warning",
+  AJUSTE: "info",
   EFETIVACAO: "success",
   CANCELAMENTO: "error",
   REINICIO_PERIODO: "primary",

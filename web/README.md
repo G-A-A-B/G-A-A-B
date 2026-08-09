@@ -48,8 +48,10 @@ libera o hold e aplica o **físico autoritativo do sistema externo** (o campo
 - Configurar **SKU**, **Centro**, **físico**, **canais** (nome, proteção,
   restrição instantânea e cota acumulada por período) e **fair-share**.
 - **Nova reserva** por canal (entra como RESERVED, debita o disponível).
-- **Tabela de Reservas**: cada reserva com seu status; nas RESERVED, informar o
-  **Novo físico** (feed externo) e **Efetivar**, ou **Cancelar**.
+- **Tabela de Reservas**: cada reserva com seu status; nas RESERVED, **ajustar
+  a quantidade (+/−)** respeitando o disponível, informar o **Novo físico**
+  (feed externo) e **Efetivar**, ou **Cancelar**. Após EFFECTIVE a reserva não
+  muda.
 - **Reiniciar período** (reabre as cotas de restrição acumulada).
 - Tabela de **Disponibilidade (ATP)** ao vivo — proteção, proteção **efetiva**
   (com fair-share), restrição, **cota do período** (vendas/cota), reservado e ATP.
@@ -77,6 +79,10 @@ com "Novo físico" + Efetivar/Cancelar, e o histórico da posição.*
 ![Outra posição, independente](docs/screenshot-posicao-2.png)
 *`SKU-1001 @ CD-RJ`: outra posição, com físico, canais, histórico e reservas
 próprios — totalmente independente da anterior.*
+
+![Ajuste de quantidade](docs/screenshot-ajuste.png)
+*Ajuste +/− da quantidade de uma reserva RESERVED (controles "− 42 +"), com os
+eventos AJUSTE no histórico e o disponível/ATP recalculados a cada passo.*
 
 ![Modo escuro](docs/screenshot-multiposicao-dark.png)
 *Modo escuro (tema Material 3).*

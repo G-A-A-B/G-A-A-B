@@ -4,6 +4,7 @@ import {
   Card,
   CardContent,
   Chip,
+  IconButton,
   Stack,
   Table,
   TableBody,
@@ -17,6 +18,8 @@ import {
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import type { MotorATP, Reserva, StatusReserva } from "../atp/engine";
 
 const COR_STATUS: Record<StatusReserva, "warning" | "success" | "default"> = {
@@ -28,11 +31,13 @@ const COR_STATUS: Record<StatusReserva, "warning" | "success" | "default"> = {
 function LinhaReservada({
   r,
   fisicoAtual,
+  onAjustar,
   onEfetivar,
   onCancelar,
 }: {
   r: Reserva;
   fisicoAtual: number;
+  onAjustar: (id: number, delta: number) => void;
   onEfetivar: (id: number, novoFisico: number) => void;
   onCancelar: (id: number) => void;
 }) {
@@ -43,7 +48,23 @@ function LinhaReservada({
     <TableRow hover>
       <TableCell>#{r.id}</TableCell>
       <TableCell>{r.canal}</TableCell>
-      <TableCell align="right">{r.quantidade}</TableCell>
+      <TableCell align="right">
+        <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="flex-end">
+          <Tooltip title="Diminuir 1">
+            <IconButton size="small" onClick={() => onAjustar(r.id, -1)}>
+              <RemoveIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
+          <span style={{ minWidth: 24, textAlign: "center", display: "inline-block" }}>
+            {r.quantidade}
+          </span>
+          <Tooltip title="Aumentar 1 (até o disponível)">
+            <IconButton size="small" onClick={() => onAjustar(r.id, 1)}>
+              <AddIcon fontSize="inherit" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </TableCell>
       <TableCell>
         <Chip size="small" color="warning" label="RESERVED" />
       </TableCell>
@@ -85,10 +106,12 @@ function LinhaReservada({
 
 export default function ReservasTable({
   motor,
+  onAjustar,
   onEfetivar,
   onCancelar,
 }: {
   motor: MotorATP;
+  onAjustar: (id: number, delta: number) => void;
   onEfetivar: (id: number, novoFisico: number) => void;
   onCancelar: (id: number) => void;
 }) {
@@ -127,6 +150,7 @@ export default function ReservasTable({
                     key={r.id}
                     r={r}
                     fisicoAtual={motor.fisico}
+                    onAjustar={onAjustar}
                     onEfetivar={onEfetivar}
                     onCancelar={onCancelar}
                   />

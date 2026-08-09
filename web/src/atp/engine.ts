@@ -61,6 +61,7 @@ export interface Reserva {
 export type TipoEvento =
   | "INICIAL"
   | "RESERVA"
+  | "AJUSTE"
   | "EFETIVACAO"
   | "CANCELAMENTO"
   | "REINICIO_PERIODO";
@@ -298,6 +299,38 @@ export class MotorATP {
       r.quantidade,
       rotulo || `#${id} físico→${fisicoAlvo}`,
     );
+  }
+
+  /**
+   * Ajusta a quantidade de uma reserva RESERVED por `delta` (+ ou −).
+   *
+   * Só é permitido enquanto a reserva está RESERVED (após EFFECTIVE não muda).
+   * Um aumento nunca pode superar o saldo disponível: `delta` extra precisa
+   * caber no ATP atual do canal. A quantidade não pode cair abaixo de 1 (para
+   * remover, use `cancelar`).
+   */
+  ajustar(id: number, delta: number, rotulo = ""): void {
+    if (!Number.isInteger(delta) || delta === 0) {
+      throw new ErroDeReserva("ajuste deve ser um inteiro diferente de zero");
+    }
+    const r = this.exigeReservada(id);
+    const nova = r.quantidade + delta;
+    if (nova < 1) {
+      throw new ErroDeReserva(
+        `ajuste deixaria a reserva #${id} com ${nova}; use cancelar para remover`,
+      );
+    }
+    if (delta > 0) {
+      const headroom = this.atp(r.canal);
+      if (delta > headroom) {
+        throw new ErroDeReserva(
+          `ajuste de +${delta} na reserva #${id} excede o ATP de ${headroom}`,
+        );
+      }
+    }
+    r.quantidade = nova;
+    this.checarInvariantes();
+    this.registrar("AJUSTE", r.canal, delta, rotulo || `#${id} → ${nova}`);
   }
 
   /** Cancela uma reserva (RESERVED → CANCELLED). Recompõe o saldo; físico intacto. */

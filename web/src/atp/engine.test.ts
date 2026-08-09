@@ -108,6 +108,45 @@ describe("MotorATP — reservas com status (RESERVED/EFFECTIVE/CANCELLED)", () =
     expect(() => m.efetivar(idA, 10)).toThrow(ErroDeEfetivacao);
   });
 
+  it("ajustar aumenta a reserva respeitando o ATP", () => {
+    const m = base();
+    const id = m.reservar("Site", 40); // ATP Site restante = 30
+    m.ajustar(id, 20);
+    expect(m.reservaPorId(id)?.quantidade).toBe(60);
+    expect(m.reservadoDe("Site")).toBe(60);
+  });
+
+  it("ajustar para cima além do disponível é recusado", () => {
+    const m = base();
+    const id = m.reservar("Site", 60); // ATP Site restante = 10
+    expect(() => m.ajustar(id, 11)).toThrow(ErroDeReserva);
+    expect(m.reservaPorId(id)?.quantidade).toBe(60); // inalterada
+  });
+
+  it("ajustar para baixo reduz a reserva (mínimo 1)", () => {
+    const m = base();
+    const id = m.reservar("Site", 40);
+    m.ajustar(id, -15);
+    expect(m.reservaPorId(id)?.quantidade).toBe(25);
+    expect(() => m.ajustar(id, -25)).toThrow(ErroDeReserva); // ficaria 0
+  });
+
+  it("ajustar respeita a restrição instantânea do canal", () => {
+    const m = base();
+    const id = m.reservar("Marketplace", 15); // teto 20 → resta 5
+    expect(() => m.ajustar(id, 6)).toThrow(ErroDeReserva);
+    m.ajustar(id, 5); // exatamente o teto
+    expect(m.reservaPorId(id)?.quantidade).toBe(20);
+  });
+
+  it("não é possível ajustar uma reserva EFFECTIVE", () => {
+    const m = base();
+    const id = m.reservar("Site", 10);
+    m.efetivar(id, 90);
+    expect(() => m.ajustar(id, 1)).toThrow(ErroDeEfetivacao);
+    expect(() => m.ajustar(id, -1)).toThrow(ErroDeEfetivacao);
+  });
+
   it("cancelar recompõe o saldo sem mexer no físico", () => {
     const m = base();
     const id = m.reservar("Site", 40);

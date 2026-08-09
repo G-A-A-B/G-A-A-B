@@ -241,6 +241,7 @@ export default function App() {
         <Box sx={{ mt: 3 }}>
           <ReservasTable
             motor={motor}
+            onAjustar={(id, d) => operar((m) => m.ajustar(id, d))}
             onEfetivar={(id, nf) => operar((m) => m.efetivar(id, nf))}
             onCancelar={(id) => operar((m) => m.cancelar(id))}
           />

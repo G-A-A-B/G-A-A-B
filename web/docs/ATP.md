@@ -201,7 +201,8 @@ status):
 
 - **RESERVED:** garante a intenção de compra e **debita o saldo disponível**.
   Resolve a concorrência — dois pedidos não reservam a mesma unidade (evita
-  *oversell*).
+  *oversell*). Enquanto RESERVED, a quantidade pode ser **ajustada (+/−)**; um
+  aumento nunca supera o saldo disponível (precisa caber no ATP do canal).
 - **EFFECTIVE:** venda confirmada. **Recompõe o saldo** (o hold é liberado) e,
   no mesmo momento, o **estoque físico é atualizado pela quantidade vinda de
   outro sistema** — refletindo as vendas realizadas **e** a reposição da
