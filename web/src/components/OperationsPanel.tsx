@@ -9,23 +9,17 @@ import {
   Typography,
 } from "@mui/material";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 interface Props {
   canais: string[];
   onReservar: (canal: string, qtd: number) => void;
-  onEfetivar: (canal: string, qtd: number) => void;
-  onCancelar: (canal: string, qtd: number) => void;
   onReiniciarPeriodo: () => void;
 }
 
 export default function OperationsPanel({
   canais,
   onReservar,
-  onEfetivar,
-  onCancelar,
   onReiniciarPeriodo,
 }: Props) {
   const [canal, setCanal] = useState(canais[0] ?? "");
@@ -37,7 +31,7 @@ export default function OperationsPanel({
     <Card variant="outlined">
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          Operações
+          Nova reserva
         </Typography>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
           <TextField
@@ -62,8 +56,6 @@ export default function OperationsPanel({
             onChange={(e) => setQtd(Math.max(1, Number(e.target.value)))}
             sx={{ width: 130 }}
           />
-        </Stack>
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
           <Button
             variant="contained"
             startIcon={<ShoppingCartIcon />}
@@ -71,29 +63,17 @@ export default function OperationsPanel({
           >
             Reservar
           </Button>
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<CheckCircleIcon />}
-            onClick={() => onEfetivar(alvo, qtd)}
-          >
-            Efetivar
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<CancelIcon />}
-            onClick={() => onCancelar(alvo, qtd)}
-          >
-            Cancelar
-          </Button>
         </Stack>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+          A reserva entra como <strong>RESERVED</strong> e debita o disponível.
+          Efetive ou cancele cada reserva na tabela ao lado.
+        </Typography>
         <Button
           variant="text"
           size="small"
           startIcon={<RestartAltIcon />}
           onClick={onReiniciarPeriodo}
-          sx={{ mt: 1.5 }}
+          sx={{ mt: 1 }}
         >
           Reiniciar período (reabre cotas acumuladas)
         </Button>

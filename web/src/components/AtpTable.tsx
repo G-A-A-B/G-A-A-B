@@ -64,7 +64,7 @@ export default function AtpTable({ motor }: { motor: MotorATP }) {
                           : `${motor.vendasDe(c.nome)} / ${c.restricaoAcumulada}`}
                       </TableCell>
                     )}
-                    <TableCell align="right">{motor.reservaDe(c.nome)}</TableCell>
+                    <TableCell align="right">{motor.reservadoDe(c.nome)}</TableCell>
                     <TableCell align="right">
                       <Chip
                         size="small"

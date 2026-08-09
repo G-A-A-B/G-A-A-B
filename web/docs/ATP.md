@@ -157,8 +157,8 @@ Um **limite** de quanto um canal pode consumir, para favorecer os demais.
 
 > **Neste simulador:** ambas as semânticas existem e podem coexistir num mesmo
 > canal. A **instantânea** (`restricao`) limita reservas ativas e reabre ao
-> efetivar/cancelar. A **acumulada** (`restricao_acumulada`) limita vendas +
-> reservas do período e só reabre em `reiniciar_periodo()` — efetivar apenas
+> efetivar/cancelar. A **acumulada** (`restricaoAcumulada`) limita vendas +
+> reservas do período e só reabre em `reiniciarPeriodo()` — efetivar apenas
 > converte reserva em venda, sem reabrir a cota. Com as duas setadas, vale o
 > menor teto.
 
@@ -173,41 +173,48 @@ proteções "estouram". Estratégias de mercado:
 
 > **Neste simulador:** por padrão, proteções sobre-comprometidas são
 > **recusadas na construção** (`ConfiguracaoInvalida`). Habilitando
-> `fair_share=True`, o físico é **rateado proporcionalmente** às proteções
+> `fairShare = true`, o físico é **rateado proporcionalmente** às proteções
 > (método do maior resto, as fatias somam exatamente o físico) e a proteção
 > efetiva de cada canal passa a ser sua fatia.
 
 ---
 
-## 5. Controle de concorrência por reserva
+## 5. Controle de concorrência por reserva (status)
 
-O simulador reflete o mecanismo real da operação: **reserva**.
-
-```
-[disponível] ──reservar──► [reservado] ──efetivar──► [venda confirmada]
-      ▲                          │                          │
-      │                          └──cancelar──┘             │
-      └──────── físico baixado (mesma operação) ────────────┘
-```
-
-- **Reservar:** retém estoque, reduzindo o disponível. Resolve a concorrência —
-  dois pedidos não reservam a mesma unidade (evita *oversell*).
-- **Efetivar:** confirma a venda. A reserva é **liberada** (volta ao
-  disponível) **e**, na mesma operação, o **físico é baixado**. O efeito
-  líquido sobre o disponível é **zero**.
-- **Cancelar:** devolve a reserva ao disponível sem tocar no físico.
-
-### O gap de efetivação (o único risco real)
-
-Se a liberação da reserva e a baixa do físico **não forem atômicas**, existe
-uma janela em que a reserva já saiu mas o físico ainda não baixou:
+A concorrência é resolvida por **reserva**, modelada com ciclo de vida por
+**status** — cada reserva é uma entidade (id, canal, quantidade, status):
 
 ```
-Reservas já = 0   e   Físico ainda = 100   →   Disponível = 100 (fantasma!) → oversell
+                    ┌──efetivar(novoFísico)──► EFFECTIVE
+   (nova)──► RESERVED│
+                    └──cancelar──────────────► CANCELLED
+
+   Disponível = Físico − Σ Reservas RESERVED
 ```
 
-> **Neste simulador:** `efetivar()` faz as duas coisas na **mesma operação
-> (atômica)**, fechando esse gap por construção.
+- **RESERVED:** garante a intenção de compra e **debita o saldo disponível**.
+  Resolve a concorrência — dois pedidos não reservam a mesma unidade (evita
+  *oversell*).
+- **EFFECTIVE:** venda confirmada. **Recompõe o saldo** (o hold é liberado) e,
+  no mesmo momento, o **estoque físico é atualizado pela quantidade vinda de
+  outro sistema** — refletindo as vendas realizadas **e** a reposição da
+  indústria. A efetivação **não** baixa o físico por conta própria; ela aplica
+  o físico autoritativo do feed externo (`novoFísico`).
+- **CANCELLED:** intenção desfeita. Recompõe o saldo; o físico não muda.
+
+### Por que o físico vem de fora
+
+Quem atualiza o estoque físico é **outro sistema** (ERP/WMS), que consolida
+vendas faturadas e recebimentos da indústria. Por isso a efetivação recebe o
+`novoFísico` em vez de simplesmente fazer `físico − quantidade`:
+
+- Se o feed reflete só a venda: `novoFísico = físico − quantidade` (padrão).
+- Se houve reposição junto: `novoFísico > físico − quantidade` (o disponível
+  sobe).
+
+Para preservar o **não-oversell**, a efetivação é recusada se o `novoFísico`
+informado ficar **abaixo do que segue reservado** por outras reservas RESERVED
+(deixaria o disponível negativo).
 
 ---
 
@@ -277,15 +284,14 @@ Leitura dos pontos-chave:
 - **T1:** o teto de 20 do Marketplace, menos as 15 reservadas, deixa ATP = 5.
 - **T2:** mesmo com 55 unidades reservadas, a **proteção da Loja segue intocada**
   — `Disponível − 30` blinda as 30 da Loja; Site e Mkt nunca as tocam.
-- **T3:** ao efetivar, o físico baixa (100→85), o disponível **não muda**
-  (liberação + baixa se cancelam) e o teto do Marketplace **reabre** (0→15).
+- **T3:** ao efetivar, o feed externo informa o físico 85 (aqui, `100 − 15`, só
+  a venda); o hold é liberado, o disponível **não muda** e o teto do Marketplace
+  **reabre** (0→15).
 - **T4:** a Loja consome exatamente sua proteção; nenhuma invariante quebra.
 
-Este cenário é executável e gera um `.xlsx` com todo o histórico:
-
-```bash
-python -m cenarios.cenario_base   # imprime a tabela e exporta saida/historico_movimentos.xlsx
-```
+Este fluxo é reproduzível no app (`npm run dev`): crie as reservas, efetive
+informando o **Novo físico** e exporte o histórico em `.xlsx` pelo botão
+**Exportar .xlsx**.
 
 A planilha tem duas abas: **Movimentos** (uma linha por evento, com físico,
 disponível, reservas e ATP por canal) e **Configuração** (físico inicial e as
@@ -315,13 +321,10 @@ Extensões naturais, cada uma isolando uma variação do modelo:
 - **Rateio por prioridade/segmento** sob escassez (o fair-share atual é
   proporcional; uma variante seria priorizar canais mais rentáveis — cf. PTP).
 - **Proteção com janela temporal** (expira num horário e libera aos demais).
-- **Restrição acumulada por período** (cota de vendas, além da instantânea).
 - **ATP time-phased** com recebimentos futuros do CD (§3.2).
 - **Multi-CD**: mesmo SKU em vários CDs, com regra de sourcing por canal.
-- **Modelagem explícita do gap de efetivação** para estudar cenários de
-  oversell quando a baixa do físico é assíncrona.
 
 ---
 
-*Este documento descreve o modelo implementado em `estoque_atp/`. Para a
+*Este documento descreve o modelo implementado em `src/atp/engine.ts`. Para a
 referência rápida de uso, veja o [README](../README.md).*

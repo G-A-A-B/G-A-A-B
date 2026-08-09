@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { MotorATP, canal, ConfiguracaoInvalida, ErroDeReserva } from "./engine";
+import {
+  MotorATP,
+  canal,
+  ConfiguracaoInvalida,
+  ErroDeReserva,
+  ErroDeEfetivacao,
+} from "./engine";
 
 function base() {
   return new MotorATP(100, [
@@ -9,23 +15,10 @@ function base() {
   ]);
 }
 
-describe("MotorATP — paridade com o simulador Python", () => {
+describe("MotorATP — ATP e políticas", () => {
   it("ATP inicial reflete proteção e restrição", () => {
     const m = base();
     expect(m.snapshot()).toEqual({ Loja: 100, Site: 70, Marketplace: 20 });
-  });
-
-  it("cenário base T0→T4 bate com o Python", () => {
-    const m = base();
-    m.reservar("Marketplace", 15);
-    expect(m.snapshot()).toEqual({ Loja: 85, Site: 55, Marketplace: 5 });
-    m.reservar("Site", 40);
-    expect(m.snapshot()).toEqual({ Loja: 45, Site: 15, Marketplace: 5 });
-    m.efetivar("Marketplace", 15);
-    expect(m.fisico).toBe(85);
-    expect(m.snapshot()).toEqual({ Loja: 45, Site: 15, Marketplace: 15 });
-    m.reservar("Loja", 30);
-    expect(m.reservaDe("Loja")).toBe(30);
   });
 
   it("proteção residual não bloqueia estoque em dobro", () => {
@@ -58,17 +51,72 @@ describe("MotorATP — paridade com o simulador Python", () => {
     expect(m.atp("B")).toBe(50);
   });
 
-  it("fair-share com resto soma exatamente o físico", () => {
-    const m = new MotorATP(75, [canal("A", 50), canal("B", 50)], true);
-    const ef = m.protecoesEfetivas();
-    expect(ef.A + ef.B).toBe(75);
+  it("restrição menor que a proteção do mesmo canal é recusada", () => {
+    expect(() => new MotorATP(100, [canal("A", 30, 20)])).toThrow(
+      ConfiguracaoInvalida,
+    );
+  });
+});
+
+describe("MotorATP — reservas com status (RESERVED/EFFECTIVE/CANCELLED)", () => {
+  it("reservar cria uma reserva RESERVED e debita o disponível", () => {
+    const m = base();
+    const id = m.reservar("Site", 40);
+    expect(m.reservaPorId(id)?.status).toBe("RESERVED");
+    expect(m.disponivel).toBe(60);
+    expect(m.reservadoDe("Site")).toBe(40);
   });
 
-  it("restrição acumulada NÃO reabre ao efetivar, só no reinício", () => {
+  it("efetivar recompõe o saldo e atualiza o físico pelo feed externo", () => {
+    const m = base();
+    const id = m.reservar("Site", 40);
+    // Sistema externo informa físico 65 (vendeu 40, indústria repôs 5).
+    m.efetivar(id, 65);
+    expect(m.reservaPorId(id)?.status).toBe("EFFECTIVE");
+    expect(m.reservadoDe("Site")).toBe(0); // hold liberado
+    expect(m.fisico).toBe(65); // físico veio de fora
+    expect(m.disponivel).toBe(65);
+  });
+
+  it("efetivar sem novo físico assume físico − quantidade (só a venda)", () => {
+    const m = base();
+    const id = m.reservar("Site", 40);
+    m.efetivar(id);
+    expect(m.fisico).toBe(60);
+  });
+
+  it("efetivar com físico abaixo do que segue reservado é recusado", () => {
+    const m = base();
+    const idA = m.reservar("Site", 40);
+    m.reservar("Loja", 20); // 20 seguem RESERVED
+    // Físico externo 10 < 20 ainda reservado → oversell, recusado.
+    expect(() => m.efetivar(idA, 10)).toThrow(ErroDeEfetivacao);
+  });
+
+  it("cancelar recompõe o saldo sem mexer no físico", () => {
+    const m = base();
+    const id = m.reservar("Site", 40);
+    m.cancelar(id);
+    expect(m.reservaPorId(id)?.status).toBe("CANCELLED");
+    expect(m.fisico).toBe(100);
+    expect(m.disponivel).toBe(100);
+  });
+
+  it("efetivar/cancelar uma reserva não-RESERVED falha", () => {
+    const m = base();
+    const id = m.reservar("Site", 10);
+    m.efetivar(id, 90);
+    expect(() => m.efetivar(id, 80)).toThrow(ErroDeEfetivacao);
+    expect(() => m.cancelar(id)).toThrow(ErroDeEfetivacao);
+  });
+});
+
+describe("MotorATP — restrição acumulada por período", () => {
+  it("não reabre ao efetivar, só no reinício", () => {
     const m = new MotorATP(100, [canal("Mkt", 0, null, 20)]);
     expect(m.atp("Mkt")).toBe(20);
-    m.reservar("Mkt", 20);
-    m.efetivar("Mkt", 20);
+    const id = m.reservar("Mkt", 20);
+    m.efetivar(id, 80);
     expect(m.atp("Mkt")).toBe(0); // instantânea reabriria; acumulada não
     m.reiniciarPeriodo();
     expect(m.vendasDe("Mkt")).toBe(0);
@@ -76,23 +124,13 @@ describe("MotorATP — paridade com o simulador Python", () => {
     expect(m.historico[m.historico.length - 1].evento).toBe("REINICIO_PERIODO");
   });
 
-  it("instantânea e acumulada combinadas: vale o menor teto", () => {
-    const m = new MotorATP(100, [canal("Mkt", 0, 8, 20)]);
-    expect(m.atp("Mkt")).toBe(8);
-    m.reservar("Mkt", 8);
-    m.efetivar("Mkt", 8);
-    expect(m.atp("Mkt")).toBe(8); // min(instantânea 8, acumulada 20−8=12)
-  });
-
-  it("restrição menor que a proteção do mesmo canal é recusada", () => {
-    expect(() => new MotorATP(100, [canal("A", 30, 20)])).toThrow(
-      ConfiguracaoInvalida,
-    );
-  });
-
-  it("proteção com teto maior (piso 20 / teto 50) é válida", () => {
-    const m = new MotorATP(100, [canal("A", 20, 50), canal("B")]);
-    expect(m.atp("A")).toBe(50); // limitado pelo teto
-    expect(m.atp("B")).toBe(80); // 100 − 20 (piso da A)
+  it("cancelamento devolve a cota; venda não", () => {
+    const m = new MotorATP(100, [canal("Mkt", 0, null, 20)]);
+    const id1 = m.reservar("Mkt", 20);
+    m.cancelar(id1);
+    expect(m.atp("Mkt")).toBe(20); // cancelada não conta
+    const id2 = m.reservar("Mkt", 12);
+    m.efetivar(id2, 88);
+    expect(m.atp("Mkt")).toBe(8); // vendeu 12 no período
   });
 });

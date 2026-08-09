@@ -1,8 +1,5 @@
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.venv/
-venv/
-*.egg-info/
-saida/
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
 *.xlsx

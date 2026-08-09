@@ -23,6 +23,7 @@ import { exportarXlsx } from "./atp/exportXlsx";
 import ConfigPanel, { type CanalCfg } from "./components/ConfigPanel";
 import AtpTable from "./components/AtpTable";
 import OperationsPanel from "./components/OperationsPanel";
+import ReservasTable from "./components/ReservasTable";
 import HistoryTable from "./components/HistoryTable";
 import { PRESETS } from "./presets";
 
@@ -124,6 +125,7 @@ export default function App() {
             sx={{
               flex: { md: "0 0 42%" },
               width: "100%",
+              minWidth: 0,
               display: "flex",
               flexDirection: "column",
               gap: 3,
@@ -141,8 +143,6 @@ export default function App() {
             <OperationsPanel
               canais={nomesCanais}
               onReservar={(c, q) => operar((m) => m.reservar(c, q))}
-              onEfetivar={(c, q) => operar((m) => m.efetivar(c, q))}
-              onCancelar={(c, q) => operar((m) => m.cancelar(c, q))}
               onReiniciarPeriodo={() => operar((m) => m.reiniciarPeriodo())}
             />
           </Box>
@@ -150,6 +150,7 @@ export default function App() {
             sx={{
               flex: { md: "1 1 58%" },
               width: "100%",
+              minWidth: 0,
               display: "flex",
               flexDirection: "column",
               gap: 3,
@@ -165,6 +166,14 @@ export default function App() {
               }
             />
           </Box>
+        </Box>
+
+        <Box sx={{ mt: 3 }}>
+          <ReservasTable
+            motor={motor}
+            onEfetivar={(id, nf) => operar((m) => m.efetivar(id, nf))}
+            onCancelar={(id) => operar((m) => m.cancelar(id))}
+          />
         </Box>
       </Container>
 
