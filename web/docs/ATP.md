@@ -181,8 +181,15 @@ proteções "estouram". Estratégias de mercado:
 
 ## 5. Controle de concorrência por reserva (status)
 
+O estoque é organizado em **posições**, cada uma identificada por
+**(SKU, Centro de Distribuição)** com seu próprio físico, canais e reservas. A
+**chave da reserva** é **SKU + Centro + canal** (mais o id da reserva
+individual); o ATP é calculado por posição e posições diferentes são
+independentes.
+
 A concorrência é resolvida por **reserva**, modelada com ciclo de vida por
-**status** — cada reserva é uma entidade (id, canal, quantidade, status):
+**status** — cada reserva é uma entidade (id, sku, centro, canal, quantidade,
+status):
 
 ```
                     ┌──efetivar(novoFísico)──► EFFECTIVE

@@ -22,10 +22,13 @@ export default function AtpTable({ motor }: { motor: MotorATP }) {
   return (
     <Card variant="outlined">
       <CardContent>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }} flexWrap="wrap" useFlexGap>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Disponibilidade (ATP)
           </Typography>
+          <Chip color="primary" label={`${motor.sku} @ ${motor.centro}`} />
+        </Stack>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
           <Chip color="primary" variant="outlined" label={`Físico ${motor.fisico}`} />
           <Chip color="secondary" variant="outlined" label={`Disponível ${motor.disponivel}`} />
           {motor.fairShare && sobrecomprometido && (

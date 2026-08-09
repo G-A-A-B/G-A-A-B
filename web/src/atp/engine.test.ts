@@ -2,13 +2,19 @@ import { describe, it, expect } from "vitest";
 import {
   MotorATP,
   canal,
+  type Canal,
   ConfiguracaoInvalida,
   ErroDeReserva,
   ErroDeEfetivacao,
 } from "./engine";
 
+// Helper: cria um motor para uma posição fixa (SKU-1 @ CD-1).
+function mk(fisico: number, canais: Canal[], fairShare = false): MotorATP {
+  return new MotorATP("SKU-1", "CD-1", fisico, canais, fairShare);
+}
+
 function base() {
-  return new MotorATP(100, [
+  return mk(100, [
     canal("Loja", 30),
     canal("Site"),
     canal("Marketplace", 0, 20),
@@ -22,7 +28,7 @@ describe("MotorATP — ATP e políticas", () => {
   });
 
   it("proteção residual não bloqueia estoque em dobro", () => {
-    const m = new MotorATP(100, [canal("Loja", 30), canal("Site")]);
+    const m = mk(100, [canal("Loja", 30), canal("Site")]);
     m.reservar("Loja", 25);
     expect(m.atp("Site")).toBe(70);
   });
@@ -33,26 +39,26 @@ describe("MotorATP — ATP e políticas", () => {
   });
 
   it("não-oversell na disputa pela última unidade", () => {
-    const m = new MotorATP(1, [canal("A"), canal("B")]);
+    const m = mk(1, [canal("A"), canal("B")]);
     m.reservar("A", 1);
     expect(() => m.reservar("B", 1)).toThrow(ErroDeReserva);
   });
 
   it("proteção sobre-comprometida é recusada sem fair-share", () => {
-    expect(() => new MotorATP(100, [canal("A", 60), canal("B", 60)])).toThrow(
+    expect(() => mk(100, [canal("A", 60), canal("B", 60)])).toThrow(
       ConfiguracaoInvalida,
     );
   });
 
   it("fair-share rateia proporcionalmente (60+60 → 50/50)", () => {
-    const m = new MotorATP(100, [canal("A", 60), canal("B", 60)], true);
+    const m = mk(100, [canal("A", 60), canal("B", 60)], true);
     expect(m.protecoesEfetivas()).toEqual({ A: 50, B: 50 });
     expect(m.atp("A")).toBe(50);
     expect(m.atp("B")).toBe(50);
   });
 
   it("restrição menor que a proteção do mesmo canal é recusada", () => {
-    expect(() => new MotorATP(100, [canal("A", 30, 20)])).toThrow(
+    expect(() => mk(100, [canal("A", 30, 20)])).toThrow(
       ConfiguracaoInvalida,
     );
   });
@@ -65,6 +71,15 @@ describe("MotorATP — reservas com status (RESERVED/EFFECTIVE/CANCELLED)", () =
     expect(m.reservaPorId(id)?.status).toBe("RESERVED");
     expect(m.disponivel).toBe(60);
     expect(m.reservadoDe("Site")).toBe(40);
+  });
+
+  it("a reserva carrega a chave SKU + Centro + canal", () => {
+    const m = base();
+    const id = m.reservar("Site", 10);
+    const r = m.reservaPorId(id)!;
+    expect(r.sku).toBe("SKU-1");
+    expect(r.centro).toBe("CD-1");
+    expect(r.canal).toBe("Site");
   });
 
   it("efetivar recompõe o saldo e atualiza o físico pelo feed externo", () => {
@@ -113,7 +128,7 @@ describe("MotorATP — reservas com status (RESERVED/EFFECTIVE/CANCELLED)", () =
 
 describe("MotorATP — restrição acumulada por período", () => {
   it("não reabre ao efetivar, só no reinício", () => {
-    const m = new MotorATP(100, [canal("Mkt", 0, null, 20)]);
+    const m = mk(100, [canal("Mkt", 0, null, 20)]);
     expect(m.atp("Mkt")).toBe(20);
     const id = m.reservar("Mkt", 20);
     m.efetivar(id, 80);
@@ -125,7 +140,7 @@ describe("MotorATP — restrição acumulada por período", () => {
   });
 
   it("cancelamento devolve a cota; venda não", () => {
-    const m = new MotorATP(100, [canal("Mkt", 0, null, 20)]);
+    const m = mk(100, [canal("Mkt", 0, null, 20)]);
     const id1 = m.reservar("Mkt", 20);
     m.cancelar(id1);
     expect(m.atp("Mkt")).toBe(20); // cancelada não conta

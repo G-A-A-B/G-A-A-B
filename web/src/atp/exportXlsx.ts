@@ -79,6 +79,8 @@ export async function exportarXlsx(
   // --- Aba Configuração ---
   const dadosCfg: SheetData = [
     [cab("Parâmetro"), cab("Valor"), txt("")],
+    [txt("SKU"), txt(motor.sku), txt("")],
+    [txt("Centro de Distribuição"), txt(motor.centro), txt("")],
     [txt("Estoque físico inicial"), num(motor.historico[0]?.fisico ?? motor.fisico), txt("")],
     [txt("Fair-share"), txt(motor.fairShare ? "sim" : "não"), txt("")],
     [txt(""), txt(""), txt("")],

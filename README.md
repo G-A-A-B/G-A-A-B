@@ -9,6 +9,10 @@ O repositório contém **um único projeto**: o app web (React + TypeScript +
 MUI/Material 3) em [`web/`](web/), com o motor de ATP em
 `web/src/atp/engine.ts`.
 
+O estoque é organizado em **posições** identificadas por
+**(SKU, Centro de Distribuição)**, cada uma com físico, canais e reservas
+próprios. A **chave da reserva** é **SKU + Centro + canal**.
+
 ## Começar
 
 ```bash

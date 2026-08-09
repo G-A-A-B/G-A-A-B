@@ -16,9 +16,11 @@ import {
 } from "@mui/material";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import AddBusinessIcon from "@mui/icons-material/AddBusiness";
 
 import { criarTema } from "./theme";
 import { MotorATP, canal as criarCanal } from "./atp/engine";
+import { Carteira, chavePosicao } from "./atp/carteira";
 import { exportarXlsx } from "./atp/exportXlsx";
 import ConfigPanel, { type CanalCfg } from "./components/ConfigPanel";
 import AtpTable from "./components/AtpTable";
@@ -27,83 +29,145 @@ import ReservasTable from "./components/ReservasTable";
 import HistoryTable from "./components/HistoryTable";
 import { PRESETS } from "./presets";
 
-function construir(fisico: number, canais: CanalCfg[], fairShare: boolean): MotorATP {
-  return new MotorATP(
-    fisico,
-    canais.map((c) => criarCanal(c.nome, c.protecao, c.restricao, c.restricaoAcumulada)),
-    fairShare,
-  );
+function paraCanais(cfgs: CanalCfg[]) {
+  return cfgs.map((c) => criarCanal(c.nome, c.protecao, c.restricao, c.restricaoAcumulada));
+}
+
+function cfgDoMotor(m: MotorATP): CanalCfg[] {
+  return [...m.canais.values()].map((c) => ({
+    nome: c.nome,
+    protecao: c.protecao,
+    restricao: c.restricao,
+    restricaoAcumulada: c.restricaoAcumulada,
+  }));
+}
+
+// Semeia a carteira com as posições de exemplo (SKU × CD).
+function semear(): Carteira {
+  const cart = new Carteira();
+  for (const p of PRESETS) {
+    cart.definir(p.sku, p.centro, p.fisico, paraCanais(p.canais), p.fairShare);
+  }
+  return cart;
 }
 
 export default function App() {
   const [modo, setModo] = useState<"light" | "dark">("light");
   const tema = useMemo(() => criarTema(modo), [modo]);
 
-  const [presetIdx, setPresetIdx] = useState(0);
+  const carteiraRef = useRef<Carteira>(semear());
+  const [chaveAtual, setChaveAtual] = useState(
+    chavePosicao(PRESETS[0].sku, PRESETS[0].centro),
+  );
+  const [, forcar] = useReducer((x: number) => x + 1, 0);
+
+  // Formulário da posição (espelha a posição selecionada; "Aplicar" grava).
+  const [sku, setSku] = useState(PRESETS[0].sku);
+  const [centro, setCentro] = useState(PRESETS[0].centro);
   const [fisico, setFisico] = useState(PRESETS[0].fisico);
   const [fairShare, setFairShare] = useState(PRESETS[0].fairShare);
   const [canais, setCanais] = useState<CanalCfg[]>(PRESETS[0].canais);
   const [erro, setErro] = useState<string | null>(null);
 
-  const motorRef = useRef<MotorATP>(construir(PRESETS[0].fisico, PRESETS[0].canais, PRESETS[0].fairShare));
-  const [, forcar] = useReducer((x: number) => x + 1, 0);
+  const carteira = carteiraRef.current;
+  const motor = carteira.obterPorChave(chaveAtual) ?? carteira.lista()[0];
 
-  const aplicar = (
-    f = fisico,
-    c = canais,
-    fs = fairShare,
-  ) => {
+  const carregarNoForm = (m: MotorATP) => {
+    setSku(m.sku);
+    setCentro(m.centro);
+    setFisico(m.fisico);
+    setFairShare(m.fairShare);
+    setCanais(cfgDoMotor(m));
+  };
+
+  const selecionar = (chave: string) => {
+    const m = carteira.obterPorChave(chave);
+    if (!m) return;
+    carregarNoForm(m);
+    setChaveAtual(chave);
+    forcar();
+  };
+
+  const aplicar = () => {
     try {
-      motorRef.current = construir(f, c, fs);
+      carteira.definir(sku, centro, fisico, paraCanais(canais), fairShare);
+      setChaveAtual(chavePosicao(sku, centro));
       forcar();
     } catch (e) {
       setErro((e as Error).message);
     }
   };
 
-  const carregarPreset = (idx: number) => {
-    const p = PRESETS[idx];
-    setPresetIdx(idx);
-    setFisico(p.fisico);
-    setFairShare(p.fairShare);
-    setCanais(p.canais);
-    aplicar(p.fisico, p.canais, p.fairShare);
+  const novaPosicao = () => {
+    let n = carteira.tamanho + 1;
+    let novoSku = `SKU-NOVO-${n}`;
+    while (carteira.tem(novoSku, "CD-SP")) novoSku = `SKU-NOVO-${++n}`;
+    const canaisNovo: CanalCfg[] = [
+      { nome: "Loja", protecao: 30, restricao: null, restricaoAcumulada: null },
+      { nome: "Site", protecao: 0, restricao: null, restricaoAcumulada: null },
+    ];
+    carteira.definir(novoSku, "CD-SP", 100, paraCanais(canaisNovo), false);
+    setSku(novoSku);
+    setCentro("CD-SP");
+    setFisico(100);
+    setFairShare(false);
+    setCanais(canaisNovo);
+    setChaveAtual(chavePosicao(novoSku, "CD-SP"));
+    forcar();
+  };
+
+  const remover = () => {
+    if (carteira.tamanho <= 1) return;
+    carteira.remover(motor.sku, motor.centro);
+    const prox = carteira.lista()[0];
+    carregarNoForm(prox);
+    setChaveAtual(chavePosicao(prox.sku, prox.centro));
+    forcar();
   };
 
   const operar = (fn: (m: MotorATP) => void) => {
     try {
-      fn(motorRef.current);
+      fn(motor);
       forcar();
     } catch (e) {
       setErro((e as Error).message);
     }
   };
 
-  const motor = motorRef.current;
   const nomesCanais = [...motor.canais.keys()];
+  const posicoes = carteira.lista();
 
   return (
     <ThemeProvider theme={tema}>
       <CssBaseline />
       <AppBar position="sticky" color="default" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 700 }}>
-            ATP Multicanal · Proteção & Restrição
+        <Toolbar sx={{ gap: 1, flexWrap: "wrap" }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mr: 1 }}>
+            ATP Multicanal
           </Typography>
           <TextField
             select
             size="small"
-            label="Cenário"
-            value={presetIdx}
-            onChange={(e) => carregarPreset(Number(e.target.value))}
-            sx={{ width: 260, mr: 1 }}
+            label="Posição (SKU × CD)"
+            value={chavePosicao(motor.sku, motor.centro)}
+            onChange={(e) => selecionar(e.target.value)}
+            sx={{ minWidth: 240 }}
           >
-            {PRESETS.map((p, i) => (
-              <MenuItem key={i} value={i}>
-                {p.rotulo}
-              </MenuItem>
-            ))}
+            {posicoes.map((m) => {
+              const k = chavePosicao(m.sku, m.centro);
+              return (
+                <MenuItem key={k} value={k}>
+                  {m.sku} @ {m.centro}
+                </MenuItem>
+              );
+            })}
           </TextField>
+          <Tooltip title="Nova posição de estoque">
+            <IconButton onClick={novaPosicao} color="primary">
+              <AddBusinessIcon />
+            </IconButton>
+          </Tooltip>
+          <Box sx={{ flexGrow: 1 }} />
           <Tooltip title={modo === "light" ? "Modo escuro" : "Modo claro"}>
             <IconButton onClick={() => setModo(modo === "light" ? "dark" : "light")}>
               {modo === "light" ? <DarkModeIcon /> : <LightModeIcon />}
@@ -132,13 +196,19 @@ export default function App() {
             }}
           >
             <ConfigPanel
+              sku={sku}
+              centro={centro}
               fisico={fisico}
               fairShare={fairShare}
               canais={canais}
+              podeRemover={carteira.tamanho > 1}
+              onSku={setSku}
+              onCentro={setCentro}
               onFisico={setFisico}
               onFairShare={setFairShare}
               onCanais={setCanais}
-              onAplicar={() => aplicar()}
+              onAplicar={aplicar}
+              onRemover={remover}
             />
             <OperationsPanel
               canais={nomesCanais}
@@ -160,7 +230,7 @@ export default function App() {
             <HistoryTable
               motor={motor}
               onExport={() =>
-                exportarXlsx(motor, "historico_movimentos.xlsx").catch((e) =>
+                exportarXlsx(motor, `historico_${motor.sku}_${motor.centro}.xlsx`).catch((e) =>
                   setErro((e as Error).message),
                 )
               }

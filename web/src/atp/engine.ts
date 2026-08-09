@@ -50,6 +50,9 @@ export type StatusReserva = "RESERVED" | "EFFECTIVE" | "CANCELLED";
 
 export interface Reserva {
   id: number;
+  /** Chave da reserva: SKU + Centro de Distribuição + canal. */
+  sku: string;
+  centro: string;
   canal: string;
   quantidade: number;
   status: StatusReserva;
@@ -81,6 +84,9 @@ export class ErroDeEfetivacao extends Error {}
 export class ViolacaoDeInvariante extends Error {}
 
 export class MotorATP {
+  /** Identidade da posição de estoque: SKU + Centro de Distribuição. */
+  readonly sku: string;
+  readonly centro: string;
   fisico: number;
   readonly fairShare: boolean;
   readonly canais: Map<string, Canal>;
@@ -91,8 +97,18 @@ export class MotorATP {
   readonly historico: Movimento[] = [];
   private proximoId = 1;
 
-  constructor(fisico: number, canais: Canal[], fairShare = false) {
+  constructor(
+    sku: string,
+    centro: string,
+    fisico: number,
+    canais: Canal[],
+    fairShare = false,
+  ) {
+    if (!sku.trim()) throw new Error("SKU obrigatório");
+    if (!centro.trim()) throw new Error("Centro de Distribuição obrigatório");
     if (fisico < 0) throw new Error("estoque físico não pode ser negativo");
+    this.sku = sku;
+    this.centro = centro;
     this.fairShare = fairShare;
     const somaProtecoes = canais.reduce((s, c) => s + c.protecao, 0);
     if (somaProtecoes > fisico && !fairShare) {
@@ -237,7 +253,14 @@ export class MotorATP {
       );
     }
     const id = this.proximoId++;
-    this.reservas.push({ id, canal: nome, quantidade, status: "RESERVED" });
+    this.reservas.push({
+      id,
+      sku: this.sku,
+      centro: this.centro,
+      canal: nome,
+      quantidade,
+      status: "RESERVED",
+    });
     this.checarInvariantes();
     this.registrar("RESERVA", nome, quantidade, rotulo || `#${id}`);
     return id;

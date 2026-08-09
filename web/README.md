@@ -6,8 +6,18 @@ a disputa por estoque via **ATP (Available-to-Promise)** com políticas de
 **Estoque de Proteção** e **Estoque de Restrição** por canal.
 
 Este é o **único projeto do repositório**. Toda a lógica de ATP vive no motor
-TypeScript `src/atp/engine.ts`, com suíte de testes em `src/atp/engine.test.ts`.
-A referência conceitual completa está em [`docs/ATP.md`](docs/ATP.md).
+TypeScript `src/atp/engine.ts` (com a carteira de posições em
+`src/atp/carteira.ts`) e suíte de testes em `src/atp/*.test.ts`. A referência
+conceitual completa está em [`docs/ATP.md`](docs/ATP.md).
+
+## Posições de estoque (SKU × CD)
+
+O estoque é organizado em **posições**, cada uma identificada por
+**(SKU, Centro de Distribuição)** e com seu próprio físico, canais e reservas.
+A **chave da reserva** é, portanto, **SKU + Centro + canal** (mais o id da
+reserva individual). O ATP é calculado por posição; posições diferentes são
+totalmente independentes. No app, o seletor **Posição (SKU × CD)** troca a
+posição ativa e o botão de nova posição cria outra.
 
 ## Stack
 
@@ -33,8 +43,10 @@ libera o hold e aplica o **físico autoritativo do sistema externo** (o campo
 
 ## Funcionalidades
 
-- Configurar **físico**, **canais** (nome, proteção, restrição instantânea e
-  cota acumulada por período) e **fair-share**.
+- **Posições SKU × CD**: seletor na barra, criar/editar/remover posição;
+  cada posição tem físico, canais e reservas próprios.
+- Configurar **SKU**, **Centro**, **físico**, **canais** (nome, proteção,
+  restrição instantânea e cota acumulada por período) e **fair-share**.
 - **Nova reserva** por canal (entra como RESERVED, debita o disponível).
 - **Tabela de Reservas**: cada reserva com seu status; nas RESERVED, informar o
   **Novo físico** (feed externo) e **Efetivar**, ou **Cancelar**.
@@ -43,8 +55,9 @@ libera o hold e aplica o **físico autoritativo do sistema externo** (o campo
   (com fair-share), restrição, **cota do período** (vendas/cota), reservado e ATP.
 - **Histórico de movimentos** com eventos coloridos e **exportação `.xlsx`**
   (abas Movimentos + Configuração, célula de evento colorida por tipo).
-- **Cenários prontos** no seletor do topo; erros (ATP excedido, oversell) em
-  *snackbar*.
+- **Posições de exemplo** já semeadas na carteira (base, restrição acumulada,
+  por que proteger, fair-share, piso+teto); erros (ATP excedido, oversell,
+  config inválida) em *snackbar*.
 
 ## Como rodar
 
@@ -57,12 +70,16 @@ npm test          # testes do motor (Vitest)
 
 ## Telas
 
-![Reservas com status](docs/screenshot-reservas.png)
-*Reservas com status RESERVED / EFFECTIVE / CANCELLED. Ao efetivar a #1, o
-físico foi atualizado para 90 pelo feed externo.*
+![Posição SKU-1001 @ CD-SP com reservas](docs/screenshot-multiposicao.png)
+*Posição `SKU-1001 @ CD-SP`: seletor de posição na barra, reservas RESERVED
+com "Novo físico" + Efetivar/Cancelar, e o histórico da posição.*
 
-![Modo escuro](docs/screenshot-reservas-dark.png)
-*Mesma tela em modo escuro (tema Material 3).*
+![Outra posição, independente](docs/screenshot-posicao-2.png)
+*`SKU-1001 @ CD-RJ`: outra posição, com físico, canais, histórico e reservas
+próprios — totalmente independente da anterior.*
+
+![Modo escuro](docs/screenshot-multiposicao-dark.png)
+*Modo escuro (tema Material 3).*
 
 ## Modelo de ATP
 

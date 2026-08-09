@@ -23,23 +23,35 @@ export interface CanalCfg {
 }
 
 interface Props {
+  sku: string;
+  centro: string;
   fisico: number;
   fairShare: boolean;
   canais: CanalCfg[];
+  podeRemover: boolean;
+  onSku: (v: string) => void;
+  onCentro: (v: string) => void;
   onFisico: (v: number) => void;
   onFairShare: (v: boolean) => void;
   onCanais: (c: CanalCfg[]) => void;
   onAplicar: () => void;
+  onRemover: () => void;
 }
 
 export default function ConfigPanel({
+  sku,
+  centro,
   fisico,
   fairShare,
   canais,
+  podeRemover,
+  onSku,
+  onCentro,
   onFisico,
   onFairShare,
   onCanais,
   onAplicar,
+  onRemover,
 }: Props) {
   const setCanal = (i: number, patch: Partial<CanalCfg>) => {
     const novo = canais.map((c, idx) => (idx === i ? { ...c, ...patch } : c));
@@ -56,8 +68,24 @@ export default function ConfigPanel({
     <Card variant="outlined">
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          Configuração
+          Posição de estoque
         </Typography>
+        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+          <TextField
+            label="SKU"
+            size="small"
+            value={sku}
+            onChange={(e) => onSku(e.target.value)}
+            sx={{ width: 150 }}
+          />
+          <TextField
+            label="Centro de Distribuição"
+            size="small"
+            value={centro}
+            onChange={(e) => onCentro(e.target.value)}
+            sx={{ width: 200 }}
+          />
+        </Stack>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
           <TextField
             label="Estoque físico"
@@ -143,9 +171,17 @@ export default function ConfigPanel({
             Adicionar canal
           </Button>
           <Button startIcon={<RestartAltIcon />} variant="contained" onClick={onAplicar}>
-            Aplicar / Reiniciar
+            Aplicar posição
           </Button>
+          {podeRemover && (
+            <Button color="error" variant="text" onClick={onRemover}>
+              Remover posição
+            </Button>
+          )}
         </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+          "Aplicar" cria ou substitui a posição (SKU × CD) — reinicia suas reservas.
+        </Typography>
       </CardContent>
     </Card>
   );
